@@ -17,8 +17,6 @@
 
   <PropertyGroup>
     <PostCompileBinaryModificationSentinelFile>$(IntermediateOutputPath)$(TargetFileName).pcbm</PostCompileBinaryModificationSentinelFile>
-    <OptimizationDataFolderPath>$(NuGetPackageRoot)\RoslynDependencies.OptimizationData\$(RoslynDependenciesOptimizationDataVersion)\content\OptimizationData</OptimizationDataFolderPath>
-    <OptimizationDataFile>$([System.IO.Path]::GetFullPath('$(OptimizationDataFolderPath)\$(TargetName).pgo'))</OptimizationDataFile>
     <IbcMergePath>$(NuGetPackageRoot)\Microsoft.DotNet.IBCMerge\$(MicrosoftDotNetIBCMerge)\lib\net45\ibcmerge.exe</IbcMergePath>
   </PropertyGroup>
   
@@ -43,17 +41,22 @@
        A local build emulating an official build can pass /p:SkipApplyOptimizations=true to avoid this error.
        -->
   <Target Name="ApplyOptimizations"
-          Condition="'$(OfficialBuild)' == 'true' AND '$(IsShipping)' == 'true' AND '$(SkipApplyOptimizations)' != 'true' AND Exists('$(OptimizationDataFile)')"
+          Condition="'$(OfficialBuild)' == 'true' AND '$(IsShipping)' == 'true' AND '$(SkipApplyOptimizations)' != 'true'"
           Inputs="@(IntermediateAssembly)"
           Outputs="@(IntermediateAssembly);$(PostCompileBinaryModificationSentinelFile)">
     <Message Text="Adding optimization data to @(IntermediateAssembly)" />
 
-    <Error Text="IBCMerge not found at $(IbcMergePath). Local developer builds should pass /p:SkipApplyOptimizations=true to avoid this"
-           Condition="!Exists('$(IbcMergePath)')" />
+    <Exec Command="powershell.exe -ExecutionPolicy Bypass $(RepoRoot)build\scripts\findibc.ps1 -intermediateAssembly &quot;@(IntermediateAssembly)&quot; -ibcRootFolder &quot;$(ArtifactsConfigurationDir)\OptimizationData&quot;"
+          ConsoleToMsBuild="True">
+      <Output TaskParameter="ConsoleOutput" PropertyName="OptimizationDataFile" />
+    </Exec>
 
-    <Exec Command="&quot;$(IbcMergePath)&quot; -q -f -partialNGEN -minify -mo &quot;@(IntermediateAssembly)&quot; -excludeGenmethUnboxingStubs -incremental &quot;$(OptimizationDataFile)&quot;"
+    <Error Text="IBCMerge not found at $(IbcMergePath). Local developer builds should pass /p:SkipApplyOptimizations=true to avoid this"
+           Condition="!Exists('$(IbcMergePath)') AND '$(OptimizationDataFile)' != ''" />
+
+    <Exec Command="&quot;$(IbcMergePath)&quot; -q -f -partialNGEN -minify -mo &quot;@(IntermediateAssembly)&quot; -excludeGenmethUnboxingStubs &quot;$(OptimizationDataFile)&quot;"
           ConsoleToMSBuild="true"
-          Condition="Exists('$(IbcMergePath)')">
+          Condition="Exists('$(IbcMergePath)') AND '$(OptimizationDataFile)' != ''">
       <Output TaskParameter="ConsoleOutput" PropertyName="IbcMergeOutput" />
     </Exec>
 

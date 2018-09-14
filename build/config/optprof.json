@@ -1,0 +1,135 @@
+{
+  "products": [
+    {
+      "name": "Roslyn.VisualStudio.Setup.vsix",
+      "tests": [
+        {
+          "container": "DDRIT.RPS.CSharp",
+          "testCases": [
+            "DDRIT.RPS.CSharp.CSharpTest.EditingAndDesigner"
+          ]
+        },
+        {
+          "container": "DDRIT.RPS.Xaml",
+          "testCases": [
+            "DDRIT.RPS.Xaml.BuildAndDebugTests.UAP_BuildAndDebug"
+          ]
+        },
+        {
+          "container": "WinForms",
+          "testCases": [
+            "WinForms.OptProfTests.winforms_largeform_vb",
+            "WinForms.OptProfTests.winforms_largeform_cs"
+          ]
+        },
+        {
+          "container": "TeamEng",
+          "testCases": [
+            "TeamEng.OptProfTest.vs_debugger_start_no_build_cs_scribble_IBC"
+          ]
+        },
+        {
+          "container": "VSPE",
+          "testCases": [
+            "VSPE.OptProfTests.vs_perf_designtime_ide_searchtest",
+            "VSPE.OptProfTests.vs_perf_designtime_editor_intellisense_globalcompletionlist_cs",
+            "VSPE.OptProfTests.vs_asl_cs_scenario",
+            "VSPE.OptProfTests.vs_ddbvtqa_vbwi",
+            "VSPE.OptProfTests.vs_asl_vb_scenario",
+            "VSPE.OptProfTests.vs_env_solution_createnewproject_vb_winformsapp"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ExpressionEvaluatorPackage.vsix",
+      "tests": [
+        {
+          "container": "DDRIT.RPS.CSharp",
+          "testCases": [
+            "DDRIT.RPS.CSharp.CSharpTest.BuildAndDebugging"
+          ]
+        },
+        {
+          "container": "DDRIT.RPS.Xaml",
+          "testCases": [
+            "DDRIT.RPS.Xaml.BuildAndDebugTests.UAP_BuildAndDebug"
+          ]
+        },
+        {
+          "container": "WinForms",
+          "testCases": [
+            "WinForms.OptProfTests.winforms_largeform_vb",
+            "WinForms.OptProfTests.winforms_largeform_cs"
+          ]
+        },
+        {
+          "container": "TeamEng",
+          "testCases": [
+            "TeamEng.OptProfTest.vs_debugger_EE_Managed_CSLambda"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Microsoft.CodeAnalysis.Compilers.vsix",
+      "tests": [
+        {
+          "container": "DDRIT.RPS.CSharp",
+          "testCases": [
+            "DDRIT.RPS.CSharp.CSharpTest.BuildAndDebugging"
+          ]
+        },
+        {
+          "container": "DDRIT.RPS.Xaml",
+          "testCases": [
+            "DDRIT.RPS.Xaml.BuildAndDebugTests.UAP_BuildAndDebug"
+          ]
+        },
+        {
+          "container": "WinForms",
+          "testCases": [
+            "WinForms.OptProfTests.winforms_largeform_vb",
+            "WinForms.OptProfTests.winforms_largeform_cs"
+          ]
+        },
+        {
+          "container": "TeamEng",
+          "testCases": [
+            "TeamEng.OptProfTest.vs_debugger_EE_Managed_CSLambda"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Roslyn.VisualStudio.InteractiveComponents.vsix",
+      "tests": [
+        {
+          "container": "DDRIT.RPS.CSharp",
+          "testCases": [
+            "DDRIT.RPS.CSharp.CSharpTest.EditingAndDesigner"
+          ]
+        },
+        {
+          "container": "DDRIT.RPS.Xaml",
+          "testCases": [
+            "DDRIT.RPS.Xaml.BuildAndDebugTests.UAP_BuildAndDebug"
+          ]
+        },
+        {
+          "container": "WinForms",
+          "testCases": [
+            "WinForms.OptProfTests.winforms_largeform_vb",
+            "WinForms.OptProfTests.winforms_largeform_cs"
+          ]
+        },
+        {
+          "container": "TeamEng",
+          "testCases": [
+            "TeamEng.OptProfTest.vs_debugger_start_no_build_cs_scribble_IBC"
+          ]
+        }
+      ]
+    }
+  ]
+}

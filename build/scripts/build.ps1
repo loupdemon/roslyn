@@ -230,6 +230,16 @@ function Build-Artifacts() {
     if ($pack) { $args += " /t:Pack" }    
     if (-not $deployExtensions) { $args += " /p:DeployExtension=false" }
 
+    if($sign){
+        try{
+            # Download-LatestOptProfData
+        }
+        catch {
+            # If we don't have the credentials to download the data the build will fail
+            # attampting to apply the optimizations
+        }
+    }
+    
     if ($buildCoreClr) {
         Run-MSBuild "Compilers.sln" $args -useDotnetBuild
     }
@@ -256,6 +266,7 @@ function Build-Artifacts() {
     if ($build -and $pack -and (-not $buildCoreClr)) {
         Build-InsertionItems
         Build-Installer
+        Build-OptProfData
     }
 }
 
@@ -272,6 +283,52 @@ function Build-InsertionItems() {
     }
 }
 
+function Build-OptProfData() {
+    $optProfToolDir = Get-PackageDir "RoslynTools.OptProf"
+    $optProfToolExe = Join-Path $optProfToolDir "tools\roslyn.optprof.exe"
+    $configFile = Join-Path $repoDir "build\config\optprof.json"
+    $insertionFolder = Join-Path $vsSetupDir "Insertion"
+    $outputFolder = Join-Path $configDir "DevDivInsertionFiles\OptProf"
+    Write-Host "Generating optprof data using '$configFile' into '$outputFolder'"
+    $optProfArgs = "--configFile $configFile --insertionFolder $insertionFolder --outputFolder $outputFolder"
+    Exec-Console $optProfToolExe $optProfArgs
+    
+    # Write Out Branch we are inserting into
+    $vsBranchFolder = Join-Path $configDir "DevDivInsertionFiles\BranchInfo"
+    New-Item -ItemType Directory -Force -Path $vsBranchFolder
+    $vsBranchText = Join-Path $vsBranchFolder "vsbranch.txt"
+    # InsertTargetBranchFullName is defined in .vsts-ci.yml
+    $vsBranch = $Env:InsertTargetBranchFullName
+    $vsBranch >> $vsBranchText
+}
+
+function Download-LatestOptProfData(){
+    $Server = "https://microsoft.artifacts.visualstudio.com/DefaultCollection"
+    $vstsDropClientUrl = "$Server/_apis/drop/client/exe"
+    $vstsDropClientZip = "Drop.App.zip"
+    $vstsDropClientPath = Join-Path env:Temp "VSTSDrop"
+    Remove-Item -Path $vstsDropClientPath -Force -ErrorAction SilentlyContinue -Recurse
+    Write-Host "Attempting drop.exe download from $vstsDropClientUrl"
+    $vstsDropClientZipPath = Join-Path $vstsDropClientPath $vstsDropClientZip
+    New-Item -ItemType Directory -Force -Path $vstsDropClientPath | Out-Null
+    $client = New-Object -TypeName System.Net.WebClient
+    $client.DownloadFile($vstsDropClientUrl, $vstsDropClientZipPath)
+    $null = [System.Reflection.Assembly]::LoadWithPartialName('System.IO.Compression.FileSystem')
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($vstsDropClientZipPath, $vstsDropClientPath)
+    $dropExe = -join ($vstsDropClientPath, '\lib\net45\drop.exe')
+   
+    $devDivUrl = "https://devdiv.artifacts.visualstudio.com"
+    $optimizationDataPath = "OptimizationData/dotnet/roslyn" + "/" +$branchName
+    $branchName = &git rev-parse --abbrev-ref HEAD
+    $dropListArgs = " List -s $devDivUrl -p $optimizationDataPath -b"
+    $dropListOutput = (Exec-Command $dropExe $dropListArgs) | Out-String
+    $dropListArray = $dropListOutput.Split('\n')
+    $ptimizationDataFullPath = $dropListArray[$dropListArray.Length-3]
+    
+    $outputPath = Join-Path $configDir "OptimizationData"
+    $dropGetArgs = " get -s $devDivUrl -n $ptimizationDataFullPath -d $outputPath"
+    Exec-Console $dropExe $dropGetArgs
+}
 function Build-Installer () {
     #  Copying Artifacts
     $installerDir = Join-Path $configDir "Installer"
