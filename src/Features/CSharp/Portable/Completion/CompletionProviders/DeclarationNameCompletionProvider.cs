@@ -62,7 +62,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Completion.Providers
                     sortValue++;
                 }
 
-                completionContext.SuggestionModeItem = CommonCompletionItem.Create(CSharpFeaturesResources.Name, CompletionItemRules.Default);
+                completionContext.SuggestionModeItem = CommonCompletionItem.Create(
+                    CSharpFeaturesResources.Name, 
+                    CompletionItemRules.Default, 
+                    description: CSharpFeaturesResources.Autoselect_disabled_due_to_variable_declaration.ToSymbolDisplayParts());
             }
             catch (Exception e) when (FatalError.ReportWithoutCrashUnlessCanceled(e))
             {

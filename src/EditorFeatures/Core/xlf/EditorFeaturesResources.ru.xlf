@@ -27,6 +27,11 @@
         <target state="translated">Больше не показывать это сообщение</target>
         <note />
       </trans-unit>
+      <trans-unit id="Filter">
+        <source>Filter</source>
+        <target state="new">Filter</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Format_document_performed_additional_cleanup">
         <source>Format Document performed additional cleanup</source>
         <target state="new">Format Document performed additional cleanup</target>
@@ -80,6 +85,11 @@
       <trans-unit id="String_Verbatim">
         <source>String - Verbatim</source>
         <target state="translated">Строка — Verbatim</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="Warning">
+        <source>Warning</source>
+        <target state="new">Warning</target>
         <note />
       </trans-unit>
       <trans-unit id="XML_Doc_Comments_Attribute_Name">

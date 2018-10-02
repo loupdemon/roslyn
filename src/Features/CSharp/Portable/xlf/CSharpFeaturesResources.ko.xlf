@@ -52,6 +52,11 @@
         <target state="translated">'this.' 한정자 기본 설정 적용</target>
         <note />
       </trans-unit>
+      <trans-unit id="Autoselect_disabled_due_to_variable_declaration">
+        <source>Autoselect disabled due to variable declaration</source>
+        <target state="new">Autoselect disabled due to variable declaration</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Inline_temporary_variable">
         <source>Inline temporary variable</source>
         <target state="translated">인라인 임시 변수</target>
