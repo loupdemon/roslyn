@@ -27,7 +27,7 @@
         <target state="translated">不再显示此消息</target>
         <note />
       </trans-unit>
-      <trans-unit id="Filter">
+      <trans-unit id="Filter_image_element_automation_name">
         <source>Filter</source>
         <target state="new">Filter</target>
         <note />
@@ -87,7 +87,7 @@
         <target state="translated">字符串 - 逐字字符串</target>
         <note />
       </trans-unit>
-      <trans-unit id="Warning">
+      <trans-unit id="Warning_image_element_automation_name">
         <source>Warning</source>
         <target state="new">Warning</target>
         <note />

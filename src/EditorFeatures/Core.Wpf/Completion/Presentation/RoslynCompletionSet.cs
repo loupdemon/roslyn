@@ -11,8 +11,7 @@ using Microsoft.CodeAnalysis.Text;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
-using RoslynCompletion = Microsoft.CodeAnalysis.Completion;
-using CompletionItem = Microsoft.CodeAnalysis.Completion.CompletionItem;
+using RoslynCompletionItem = Microsoft.CodeAnalysis.Completion.CompletionItem;
 using VSCompletion = Microsoft.VisualStudio.Language.Intellisense.Completion;
 
 namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.Completion.Presentation
@@ -29,8 +28,8 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.Completion.P
         protected readonly CompletionPresenterSession CompletionPresenterSession;
         private CompletionHelper _completionHelper;
 
-        protected Dictionary<RoslynCompletion.CompletionItem, VSCompletion> CompletionItemMap;
-        protected RoslynCompletion.CompletionItem SuggestionModeItem;
+        protected Dictionary<RoslynCompletionItem, VSCompletion> CompletionItemMap;
+        protected RoslynCompletionItem SuggestionModeItem;
 
         private readonly Dictionary<string, string> _displayTextToBoldingTextMap = new Dictionary<string, string>();
 
@@ -85,9 +84,9 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.Completion.P
         }
 
         public void SetCompletionItems(
-            IList<RoslynCompletion.CompletionItem> completionItems,
-            RoslynCompletion.CompletionItem selectedItem,
-            RoslynCompletion.CompletionItem suggestionModeItem,
+            IList<RoslynCompletionItem> completionItems,
+            RoslynCompletionItem selectedItem,
+            RoslynCompletionItem suggestionModeItem,
             bool suggestionMode,
             bool isSoftSelected,
             ImmutableArray<CompletionItemFilter> completionItemFilters,
@@ -104,7 +103,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.Completion.P
             }
 
             // Initialize the completion map to a reasonable default initial size (+1 for the builder)
-            CompletionItemMap = CompletionItemMap ?? new Dictionary<RoslynCompletion.CompletionItem, VSCompletion>(completionItems.Count + 1);
+            CompletionItemMap = CompletionItemMap ?? new Dictionary<RoslynCompletionItem, VSCompletion>(completionItems.Count + 1);
             FilterText = filterText;
             SuggestionModeItem = suggestionModeItem;
 
@@ -125,8 +124,8 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.Completion.P
         }
 
         private void CreateCompletionListBuilder(
-            RoslynCompletion.CompletionItem selectedItem,
-            RoslynCompletion.CompletionItem suggestionModeItem,
+            RoslynCompletionItem selectedItem,
+            RoslynCompletionItem suggestionModeItem,
             bool suggestionMode)
         {
             try
@@ -151,7 +150,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.Completion.P
             }
         }
 
-        private void CreateNormalCompletionListItems(IList<RoslynCompletion.CompletionItem> completionItems)
+        private void CreateNormalCompletionListItems(IList<RoslynCompletionItem> completionItems)
         {
             try
             {
@@ -170,7 +169,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.Completion.P
             }
         }
 
-        private VSCompletion GetVSCompletion(RoslynCompletion.CompletionItem item, string displayText = null)
+        private VSCompletion GetVSCompletion(RoslynCompletionItem item, string displayText = null)
         {
             if (!CompletionItemMap.TryGetValue(item, out var value))
             {
@@ -183,7 +182,7 @@ namespace Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.Completion.P
             return value;
         }
 
-        public RoslynCompletion.CompletionItem GetCompletionItem(VSCompletion completion)
+        public RoslynCompletionItem GetCompletionItem(VSCompletion completion)
         {
             // Linear search is ok since this is only called by the user manually selecting 
             // an item.  Creating a reverse mapping uses too much memory and affects GCs.

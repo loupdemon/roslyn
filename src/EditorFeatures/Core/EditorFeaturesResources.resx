@@ -827,10 +827,10 @@ Do you want to proceed?</value>
   <data name="Change_configuration" xml:space="preserve">
     <value>Change configuration</value>
   </data>
-  <data name="Filter" xml:space="preserve">
+  <data name="Filter_image_element_automation_name" xml:space="preserve">
     <value>Filter</value>
   </data>
-  <data name="Warning" xml:space="preserve">
+  <data name="Warning_image_element_automation_name" xml:space="preserve">
     <value>Warning</value>
   </data>
 </root>

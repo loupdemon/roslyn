@@ -27,7 +27,7 @@
         <target state="translated">Ne plus afficher ce message</target>
         <note />
       </trans-unit>
-      <trans-unit id="Filter">
+      <trans-unit id="Filter_image_element_automation_name">
         <source>Filter</source>
         <target state="new">Filter</target>
         <note />
@@ -87,7 +87,7 @@
         <target state="translated">Chaîne textuelle</target>
         <note />
       </trans-unit>
-      <trans-unit id="Warning">
+      <trans-unit id="Warning_image_element_automation_name">
         <source>Warning</source>
         <target state="new">Warning</target>
         <note />
