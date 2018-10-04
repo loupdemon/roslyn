@@ -226,7 +226,7 @@ End Module
 <code>
 Module M
     Sub Main()
-        Dim _
+        Dim _ 
             $$
     End Sub
 End Module
