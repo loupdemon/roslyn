@@ -1489,7 +1489,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 {
                     var earlyDecodeData = namedTypeSymbol.GetEarlyDecodedWellKnownAttributeData();
                     if (earlyDecodeData != null 
-                        && !earlyDecodeData.AsyncMethodBuilderTarget.IsNull 
                         && earlyDecodeData.AsyncMethodBuilderTarget.Kind == TypedConstantKind.Type)
                     {
                         builderArgument = namedTypeSymbol.GetEarlyDecodedWellKnownAttributeData().AsyncMethodBuilderTarget.Value;

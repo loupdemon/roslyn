@@ -599,14 +599,11 @@ next:;
             if (CSharpAttributeData.IsTargetEarlyAttribute(arguments.AttributeType, arguments.AttributeSyntax, AttributeDescription.AsyncMethodBuilderAttribute))
             {
                 boundAttribute = arguments.Binder.GetAttribute(arguments.AttributeSyntax, arguments.AttributeType, out hasAnyDiagnostics);
-                if (!boundAttribute.HasErrors)
-                {
-                    var typeData = arguments.GetOrCreateData<CommonTypeEarlyWellKnownAttributeData>();
-                    typeData.AsyncMethodBuilderTarget = boundAttribute.ConstructorArguments.FirstOrDefault();
 
-                    // don't return the attribute. We need to bind it again later for full diagnostic reporting
-                }
+                var typeData = arguments.GetOrCreateData<CommonTypeEarlyWellKnownAttributeData>();
+                typeData.AsyncMethodBuilderTarget = boundAttribute.ConstructorArguments.FirstOrDefault();
 
+                // don't return the attribute. We need to bind it again later for full diagnostic reporting
                 return null;
             }
 
