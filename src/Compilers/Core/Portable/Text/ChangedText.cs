@@ -234,8 +234,111 @@ namespace Microsoft.CodeAnalysis.Text
 
             return merged;
         }
-
+        
         private static ImmutableArray<TextChangeRange> Merge(ImmutableArray<TextChangeRange> oldChanges, ImmutableArray<TextChangeRange> newChanges)
+        {
+            return _Merge(oldChanges, newChanges);
+
+            var builder = ArrayBuilder<TextChangeRange>.GetInstance(oldChanges.Length + newChanges.Length);
+            Merge0(builder, oldChanges: oldChanges, oldIndex: 0, newChanges: newChanges, newIndex: 0, oldDelta: 0);
+            return builder.ToImmutableAndFree();
+        }
+
+        private static void Merge0(
+            ArrayBuilder<TextChangeRange> builder,
+            ImmutableArray<TextChangeRange> oldChanges,
+            int oldIndex,
+            ImmutableArray<TextChangeRange> newChanges,
+            int newIndex,
+            int oldDelta)
+        {
+            bool hasOldChange = oldIndex < oldChanges.Length;
+            bool hasNewChange = newIndex < newChanges.Length;
+
+            if (!hasOldChange && !hasNewChange)
+            {
+                return;
+            }
+
+            TextChangeRange oldChange = hasOldChange ? oldChanges[oldIndex] : default;
+            TextChangeRange newChange = hasNewChange ? newChanges[newIndex] : default;
+
+            if (hasOldChange && !hasNewChange)
+            {
+                int adjustedDelta = addOldChange();
+                Merge0(builder, oldChanges, oldIndex + 1, newChanges, newIndex, adjustedDelta);
+                return;
+            }
+
+            if (hasNewChange && !hasOldChange)
+            {
+                addNewChange();
+                Merge0(builder, oldChanges, oldIndex, newChanges, newIndex + 1, oldDelta);
+                return;
+            }
+
+            bool newOccursAfterOld = oldChange.Span.Start + oldChange.NewLength + oldDelta <= newChange.Span.Start;
+            if (newOccursAfterOld)
+            {
+                int adjustedDelta = addOldChange();
+                Merge0(builder, oldChanges, oldIndex + 1, newChanges, newIndex, adjustedDelta);
+                return;
+            }
+
+            bool newOccursBeforeOld = newChange.Span.End <= oldChange.Span.Start + oldDelta;
+            if (newOccursBeforeOld)
+            {
+                addNewChange();
+                Merge0(builder, oldChanges, oldIndex, newChanges, newIndex + 1, oldDelta);
+                return;
+            }
+
+            bool newOverlapsWithOld = newChange.Span.End > oldChange.Span.Start;
+            if (newOverlapsWithOld)
+            {
+                // ...
+            }
+
+            // --------
+
+            int addOldChange()
+            {
+                addChange(oldChange);
+                var adjustedDelta = oldDelta - oldChange.Span.Length + oldChange.NewLength;
+                return adjustedDelta;
+            }
+
+            void addNewChange()
+            {
+                // the new change received as input is relative to the original document after old changes are applied
+                // shift the position on the new change to instead be relative to the original document
+                var adjustedNewChange = new TextChangeRange(new TextSpan(newChange.Span.Start - oldDelta, newChange.Span.Length), newChange.NewLength);
+                addChange(adjustedNewChange);
+            }
+
+            void addChange(TextChangeRange change)
+            {
+                if (builder.Count > 0)
+                {
+                    TextChangeRange last = builder[builder.Count - 1];
+                    bool isAdjacentChange = last.Span.Start + last.Span.Length == change.Span.Start;
+                    if (isAdjacentChange)
+                    {
+                        var span = new TextSpan(last.Span.Start, last.Span.Length + change.Span.Length);
+                        builder[builder.Count - 1] = new TextChangeRange(span, last.NewLength + change.NewLength);
+                        return;
+                    }
+                    else
+                    {
+                        Debug.Assert(change.Span.Start > last.Span.Start);
+                    }
+                }
+
+                builder.Add(change);
+            }
+        }
+
+        private static ImmutableArray<TextChangeRange> _Merge(ImmutableArray<TextChangeRange> oldChanges, ImmutableArray<TextChangeRange> newChanges)
         {
             var list = new List<TextChangeRange>(oldChanges.Length + newChanges.Length);
 

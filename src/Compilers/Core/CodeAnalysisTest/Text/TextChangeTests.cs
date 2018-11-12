@@ -789,7 +789,7 @@ namespace Microsoft.CodeAnalysis.UnitTests
 
         [Fact]
         [WorkItem(26305, "https://github.com/dotnet/roslyn/issues/26305")]
-        public void WithChangesDeleteOverlap()
+        public void WithChangesDeleteAdjacent()
         {
             var sourceText = SourceText.From("Hello World");
 
