@@ -1320,17 +1320,19 @@ public sealed class MyTaskMethodBuilder
                 //         await new MyTask();
                 Diagnostic(ErrorCode.ERR_GenericConstraintNotSatisfiedRefType, "await new MyTask();").WithArguments("MyTaskMethodBuilder.AwaitUnsafeOnCompleted<TAwaiter, TStateMachine>(ref TAwaiter, ref TStateMachine)", "IMyAwaiter", "TAwaiter", "MyTask.Awaiter").WithLocation(5, 9));
         }
- 
+
         [WorkItem(21500, "https://github.com/dotnet/roslyn/issues/27228")]
+        [WorkItem(33388, "https://github.com/dotnet/roslyn/issues/33388")]
         [Fact]
         public void TaskLikeCheck_DoesntCauseBindingLoop_DuringOverloadResolution()
         {
             var source =
 @"
 [C(new C(null))]
-public class C : System.Attribute {
-  public C(C c) { }
-  public C(object o) { }
+public class C : System.Attribute
+{
+    public C(C c) { }
+    public C(object o) { }
 }
 ";
             var compilation = CreateCompilation(source);
@@ -1339,6 +1341,38 @@ public class C : System.Attribute {
                 // [C(new C(null))]
                 Diagnostic(ErrorCode.ERR_BadAttributeParamType, "C").WithArguments("c", "C").WithLocation(2, 2)
                 );
+        }
+
+        [WorkItem(21500, "https://github.com/dotnet/roslyn/issues/27228")]
+        [WorkItem(33388, "https://github.com/dotnet/roslyn/issues/33388")]
+        [Fact]
+        public void AttributeCrashRepro_33388()
+        {
+            string source = @"
+using System;
+public static class C
+{
+    public static int M(object obj) => 42;
+    public static int M<T>(C2<T> c2) => 42;
+}
+public class RecAttribute : Attribute
+{
+    public RecAttribute(int i)
+    {
+        this.i = i;
+    }
+    private int i;
+}
+[Rec(C.M(null))]
+public class C2<T>
+{
+}
+";
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics(
+                // (16,6): error CS0182: An attribute argument must be a constant expression, typeof expression or array creation expression of an attribute parameter type
+                // [Rec(C.M(null))]
+                Diagnostic(ErrorCode.ERR_BadAttributeArgument, "C.M(null)").WithLocation(16, 6));
         }
 
         [Fact]
