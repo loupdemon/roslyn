@@ -332,5 +332,65 @@ public class A
         }
 
         #endregion
+
+        [Fact, WorkItem(33542, "https://github.com/dotnet/roslyn/issues/33542")]
+        public void Repro_33542()
+        {
+            var csharp = @"
+using System.Threading.Tasks;
+
+namespace ConsoleApp6
+
+{
+
+class Program
+
+{
+
+static async Task Main(string[] args)
+
+{
+
+try
+
+{
+
+try
+
+{
+
+return;
+
+}
+
+finally
+
+{
+
+await Task.CompletedTask;
+
+}
+
+}
+
+catch { }
+
+finally
+
+{
+
+await Task.CompletedTask;
+
+}
+
+}
+
+}
+
+}
+";
+            var compilation = CreateCompilation(csharp);
+            compilation.VerifyEmitDiagnostics();
+        }
     }
 }
