@@ -177,11 +177,18 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             {
                 var hasGetSyntax = getSyntax != null;
                 _isAutoProperty = notRegularProperty && hasGetSyntax;
-                bool isReadOnly = hasGetSyntax && setSyntax == null;
+                bool isGetterOnly = hasGetSyntax && setSyntax == null;
 
-                if (_isAutoProperty && !isReadOnly && !IsStatic && ContainingType.IsReadOnly)
+                if (_isAutoProperty)
                 {
-                    diagnostics.Add(ErrorCode.ERR_AutoPropsInRoStruct, location);
+                    if (!IsStatic && !isGetterOnly && ContainingType.IsReadOnly)
+                    {
+                        diagnostics.Add(ErrorCode.ERR_AutoPropsInRoStruct, location);
+                    }
+                    else if (HasReadOnlyModifier)
+                    {
+                        diagnostics.Add(ErrorCode.ERR_BadMemberFlag, location, SyntaxFacts.GetText(SyntaxKind.ReadOnlyKeyword));
+                    }
                 }
 
                 if (_isAutoProperty || hasInitializer)
@@ -201,7 +208,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     string fieldName = GeneratedNames.MakeBackingFieldName(_sourceName);
                     _backingField = new SynthesizedBackingFieldSymbol(this,
                                                                           fieldName,
-                                                                          isReadOnly,
+                                                                          isGetterOnly,
                                                                           this.IsStatic,
                                                                           hasInitializer);
                 }
@@ -210,7 +217,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 {
                     Binder.CheckFeatureAvailability(
                         syntax,
-                        isReadOnly ? MessageID.IDS_FeatureReadonlyAutoImplementedProperties : MessageID.IDS_FeatureAutoImplementedProperties,
+                        isGetterOnly ? MessageID.IDS_FeatureReadonlyAutoImplementedProperties : MessageID.IDS_FeatureAutoImplementedProperties,
                         diagnostics,
                         location);
                 }

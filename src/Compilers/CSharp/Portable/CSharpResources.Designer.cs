@@ -826,6 +826,24 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Auto-implemented property or accessor &apos;{0}&apos; cannot be &apos;readonly&apos;..
+        /// </summary>
+        internal static string ERR_AutoPropertyCantBeReadOnly {
+            get {
+                return ResourceManager.GetString("ERR_AutoPropertyCantBeReadOnly", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Auto-implemented property or accessor cannot be &apos;readonly&apos;..
+        /// </summary>
+        internal static string ERR_AutoPropertyCantBeReadOnly_Title {
+            get {
+                return ResourceManager.GetString("ERR_AutoPropertyCantBeReadOnly_Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Auto-implemented properties inside interfaces cannot have initializers..
         /// </summary>
         internal static string ERR_AutoPropertyInitializerInInterface {
@@ -8800,6 +8818,24 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Member &apos;{0}&apos; of class or interface type &apos;{1}&apos; cannot be &apos;readonly&apos;..
+        /// </summary>
+        internal static string ERR_ReferenceTypeMemberCantBeReadOnly {
+            get {
+                return ResourceManager.GetString("ERR_ReferenceTypeMemberCantBeReadOnly", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Member of class or interface type cannot be &apos;readonly&apos;..
+        /// </summary>
+        internal static string ERR_ReferenceTypeMemberCantBeReadOnly_Title {
+            get {
+                return ResourceManager.GetString("ERR_ReferenceTypeMemberCantBeReadOnly_Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to The first parameter of a &apos;ref&apos; extension method &apos;{0}&apos; must be a value type or a generic type constrained to struct..
         /// </summary>
         internal static string ERR_RefExtensionMustBeValueTypeOrConstrainedToOne {
@@ -9606,6 +9642,24 @@ namespace Microsoft.CodeAnalysis.CSharp {
         internal static string ERR_StaticLocalFunctionCannotCaptureVariable {
             get {
                 return ResourceManager.GetString("ERR_StaticLocalFunctionCannotCaptureVariable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Static member &apos;{0}&apos; cannot be &apos;readonly&apos;..
+        /// </summary>
+        internal static string ERR_StaticMemberCantBeReadOnly {
+            get {
+                return ResourceManager.GetString("ERR_StaticMemberCantBeReadOnly", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Static member cannot be &apos;readonly&apos;..
+        /// </summary>
+        internal static string ERR_StaticMemberCantBeReadOnly_Title {
+            get {
+                return ResourceManager.GetString("ERR_StaticMemberCantBeReadOnly_Title", resourceCulture);
             }
         }
         

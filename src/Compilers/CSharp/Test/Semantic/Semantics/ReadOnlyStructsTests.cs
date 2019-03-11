@@ -1189,12 +1189,37 @@ public struct S
     public int P1 { readonly get; }
     public readonly int P2 { get; }
     public int P3 { readonly get; set; }
-    public int P4 { readonly get; readonly set; } // PROTOTYPE: readonly set on an auto-property should give an error
-    public readonly int P5 { get; set; } // PROTOTYPE: readonly set on an auto-property should give an error
+    public int P4 { readonly get; readonly set; }
+    public readonly int P5 { get; set; }
+    public readonly int P6 { readonly get; }
 }
 ";
             var comp = CreateCompilation(csharp);
-            comp.VerifyDiagnostics();
+            comp.VerifyDiagnostics(
+                // (4,30): error CS0106: The modifier 'readonly' is not valid for this item
+                //     public int P1 { readonly get; }
+                Diagnostic(ErrorCode.ERR_BadMemberFlag, "get").WithArguments("readonly").WithLocation(4, 30),
+                // (5,25): error CS0106: The modifier 'readonly' is not valid for this item
+                //     public readonly int P2 { get; }
+                Diagnostic(ErrorCode.ERR_BadMemberFlag, "P2").WithArguments("readonly").WithLocation(5, 25),
+                // (6,30): error CS0106: The modifier 'readonly' is not valid for this item
+                //     public int P3 { readonly get; set; }
+                Diagnostic(ErrorCode.ERR_BadMemberFlag, "get").WithArguments("readonly").WithLocation(6, 30),
+                // (7,30): error CS0106: The modifier 'readonly' is not valid for this item
+                //     public int P4 { readonly get; readonly set; }
+                Diagnostic(ErrorCode.ERR_BadMemberFlag, "get").WithArguments("readonly").WithLocation(7, 30),
+                // (7,44): error CS0106: The modifier 'readonly' is not valid for this item
+                //     public int P4 { readonly get; readonly set; }
+                Diagnostic(ErrorCode.ERR_BadMemberFlag, "set").WithArguments("readonly").WithLocation(7, 44),
+                // (8,25): error CS0106: The modifier 'readonly' is not valid for this item
+                //     public readonly int P5 { get; set; }
+                Diagnostic(ErrorCode.ERR_BadMemberFlag, "P5").WithArguments("readonly").WithLocation(8, 25),
+                // (9,25): error CS0106: The modifier 'readonly' is not valid for this item
+                //     public readonly int P6 { readonly get; }
+                Diagnostic(ErrorCode.ERR_BadMemberFlag, "P6").WithArguments("readonly").WithLocation(9, 25),
+                // (9,39): error CS0106: The modifier 'readonly' is not valid for this item
+                //     public readonly int P6 { readonly get; }
+                Diagnostic(ErrorCode.ERR_BadMemberFlag, "get").WithArguments("readonly").WithLocation(9, 39));
         }
 
         [Fact]
@@ -1203,7 +1228,7 @@ public struct S
             var csharp = @"
 public struct S
 {
-    public readonly int P { readonly get; }
+    public readonly int P { readonly get => 42; }
 }
 ";
             var comp = CreateCompilation(csharp);

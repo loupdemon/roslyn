@@ -5427,6 +5427,24 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
   <data name="WRN_ImplicitCopyInReadOnlyMember_Title" xml:space="preserve">
     <value>Call to non-readonly member from a 'readonly' member results in an implicit copy.</value>
   </data>
+  <data name="ERR_ReferenceTypeMemberCantBeReadOnly" xml:space="preserve">
+    <value>Member '{0}' of class or interface type '{1}' cannot be 'readonly'.</value>
+  </data>
+  <data name="ERR_ReferenceTypeMemberCantBeReadOnly_Title" xml:space="preserve">
+    <value>Member of class or interface type cannot be 'readonly'.</value>
+  </data>
+  <data name="ERR_StaticMemberCantBeReadOnly" xml:space="preserve">
+    <value>Static member '{0}' cannot be 'readonly'.</value>
+  </data>
+  <data name="ERR_StaticMemberCantBeReadOnly_Title" xml:space="preserve">
+    <value>Static member cannot be 'readonly'.</value>
+  </data>
+  <data name="ERR_AutoPropertyCantBeReadOnly" xml:space="preserve">
+    <value>Auto-implemented property or accessor '{0}' cannot be 'readonly'.</value>
+  </data>
+  <data name="ERR_AutoPropertyCantBeReadOnly_Title" xml:space="preserve">
+    <value>Auto-implemented property or accessor cannot be 'readonly'.</value>
+  </data>
   <data name="WRN_NullabilityMismatchInArgument" xml:space="preserve">
     <value>Argument of type '{0}' cannot be used for parameter '{2}' of type '{1}' in '{3}' due to differences in the nullability of reference types.</value>
   </data>
