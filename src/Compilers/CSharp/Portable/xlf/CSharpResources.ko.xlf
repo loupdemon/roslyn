@@ -32,6 +32,16 @@
         <target state="translated">식에 nullable 참조 형식 '{0}'을(를) 사용하는 것은 올바르지 않습니다. 대신 기본 형식 '{0}'을(를) 사용하세요.</target>
         <note />
       </trans-unit>
+      <trans-unit id="ERR_AutoPropertyCantBeReadOnly">
+        <source>Auto-implemented property or accessor '{0}' cannot be 'readonly'.</source>
+        <target state="new">Auto-implemented property or accessor '{0}' cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_AutoPropertyCantBeReadOnly_Title">
+        <source>Auto-implemented property or accessor cannot be 'readonly'.</source>
+        <target state="new">Auto-implemented property or accessor cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="ERR_AwaitForEachMissingMember">
         <source>Asynchronous foreach statement cannot operate on variables of type '{0}' because '{0}' does not contain a suitable public instance definition for '{1}'</source>
         <target state="translated">'{0}' 형식 변수에서 비동기 foreach 문을 수행할 수 없습니다. '{0}'에는 '{1}'의 적합한 공용 인스턴스 정의가 없기 때문입니다.</target>
@@ -85,6 +95,16 @@
       <trans-unit id="ERR_DuplicateExplicitImpl">
         <source>'{0}' is explicitly implemented more than once.</source>
         <target state="translated">'{0}'은(는) 두 번 이상 명시적으로 구현됩니다.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_DuplicatePropertyReadOnlyMods">
+        <source>Cannot specify 'readonly' modifiers on both accessors of property or indexer '{0}'.</source>
+        <target state="new">Cannot specify 'readonly' modifiers on both accessors of property or indexer '{0}'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_DuplicatePropertyReadOnlyMods_Title">
+        <source>Cannot specify 'readonly' modifiers on both accessors of property or indexer.</source>
+        <target state="new">Cannot specify 'readonly' modifiers on both accessors of property or indexer.</target>
         <note />
       </trans-unit>
       <trans-unit id="ERR_ElseCannotStartStatement">
@@ -182,6 +202,16 @@
         <target state="translated">잘못된 개체 만들기</target>
         <note />
       </trans-unit>
+      <trans-unit id="ERR_InvalidPropertyReadOnlyMods">
+        <source>Cannot specify 'readonly' modifiers on both property or indexer '{0}' and its accessors.</source>
+        <target state="new">Cannot specify 'readonly' modifiers on both property or indexer '{0}' and its accessors.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_InvalidPropertyReadOnlyMods_Title">
+        <source>Cannot specify 'readonly' modifiers on both property or indexer and its accessors.</source>
+        <target state="new">Cannot specify 'readonly' modifiers on both property or indexer and its accessors.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="ERR_InvalidStackAllocArray">
         <source>"Invalid rank specifier: expected ']'</source>
         <target state="translated">잘못된 차수 지정자입니다. ']'가 필요합니다.</target>
@@ -272,6 +302,16 @@
         <target state="translated">참조 할당의 왼쪽은 참조 로컬 또는 매개 변수여야 합니다.</target>
         <note />
       </trans-unit>
+      <trans-unit id="ERR_ReferenceTypeMemberCantBeReadOnly">
+        <source>Member '{0}' of class or interface type '{1}' cannot be 'readonly'.</source>
+        <target state="new">Member '{0}' of class or interface type '{1}' cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_ReferenceTypeMemberCantBeReadOnly_Title">
+        <source>Member of class or interface type cannot be 'readonly'.</source>
+        <target state="new">Member of class or interface type cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="ERR_SingleElementPositionalPatternRequiresDisambiguation">
         <source>A single-element deconstruct pattern requires some other syntax for disambiguation. It is recommended to add a discard designator '_' after the close paren ')'.</source>
         <target state="translated">단일 요소 분해 패턴은 명확성을 위해 다른 구문이 필요합니다. 닫는 괄호 ')' 뒤에 무시 항목 지정자 '_'을 추가하는 것이 좋습니다.</target>
@@ -285,6 +325,16 @@
       <trans-unit id="ERR_StaticLocalFunctionCannotCaptureVariable">
         <source>A static local function cannot contain a reference to '{0}'.</source>
         <target state="translated">정적 로컬 함수는 '{0}'에 대한 참조를 포함할 수 없습니다.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_StaticMemberCantBeReadOnly">
+        <source>Static member '{0}' cannot be 'readonly'.</source>
+        <target state="new">Static member '{0}' cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_StaticMemberCantBeReadOnly_Title">
+        <source>Static member cannot be 'readonly'.</source>
+        <target state="new">Static member cannot be 'readonly'.</target>
         <note />
       </trans-unit>
       <trans-unit id="ERR_SwitchArmSubsumed">

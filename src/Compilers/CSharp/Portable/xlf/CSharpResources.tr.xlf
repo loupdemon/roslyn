@@ -32,6 +32,16 @@
         <target state="translated">Boş değer atanabilir '{0}?' başvuru türünün bir as ifadesinde kullanılması yasaktır; bunun yerine temel alınan '{0}' türünü kullanın.</target>
         <note />
       </trans-unit>
+      <trans-unit id="ERR_AutoPropertyCantBeReadOnly">
+        <source>Auto-implemented property or accessor '{0}' cannot be 'readonly'.</source>
+        <target state="new">Auto-implemented property or accessor '{0}' cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_AutoPropertyCantBeReadOnly_Title">
+        <source>Auto-implemented property or accessor cannot be 'readonly'.</source>
+        <target state="new">Auto-implemented property or accessor cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="ERR_AwaitForEachMissingMember">
         <source>Asynchronous foreach statement cannot operate on variables of type '{0}' because '{0}' does not contain a suitable public instance definition for '{1}'</source>
         <target state="translated">'{0}', '{1}' için uygun bir genel örnek tanımı içermediğinden zaman uyumsuz foreach deyimi '{0}' türündeki değişkenlerle çalışmaz</target>
@@ -85,6 +95,16 @@
       <trans-unit id="ERR_DuplicateExplicitImpl">
         <source>'{0}' is explicitly implemented more than once.</source>
         <target state="translated">'{0}' bir defadan fazla açıkça uygulanmış.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_DuplicatePropertyReadOnlyMods">
+        <source>Cannot specify 'readonly' modifiers on both accessors of property or indexer '{0}'.</source>
+        <target state="new">Cannot specify 'readonly' modifiers on both accessors of property or indexer '{0}'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_DuplicatePropertyReadOnlyMods_Title">
+        <source>Cannot specify 'readonly' modifiers on both accessors of property or indexer.</source>
+        <target state="new">Cannot specify 'readonly' modifiers on both accessors of property or indexer.</target>
         <note />
       </trans-unit>
       <trans-unit id="ERR_ElseCannotStartStatement">
@@ -182,6 +202,16 @@
         <target state="translated">Geçersiz nesne oluşturma</target>
         <note />
       </trans-unit>
+      <trans-unit id="ERR_InvalidPropertyReadOnlyMods">
+        <source>Cannot specify 'readonly' modifiers on both property or indexer '{0}' and its accessors.</source>
+        <target state="new">Cannot specify 'readonly' modifiers on both property or indexer '{0}' and its accessors.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_InvalidPropertyReadOnlyMods_Title">
+        <source>Cannot specify 'readonly' modifiers on both property or indexer and its accessors.</source>
+        <target state="new">Cannot specify 'readonly' modifiers on both property or indexer and its accessors.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="ERR_InvalidStackAllocArray">
         <source>"Invalid rank specifier: expected ']'</source>
         <target state="translated">"IGeçersiz sıra belirticisi: ']' bekleniyor</target>
@@ -272,6 +302,16 @@
         <target state="translated">ref atamasının sol tarafı, yerel ref veya parametresi olmalıdır.</target>
         <note />
       </trans-unit>
+      <trans-unit id="ERR_ReferenceTypeMemberCantBeReadOnly">
+        <source>Member '{0}' of class or interface type '{1}' cannot be 'readonly'.</source>
+        <target state="new">Member '{0}' of class or interface type '{1}' cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_ReferenceTypeMemberCantBeReadOnly_Title">
+        <source>Member of class or interface type cannot be 'readonly'.</source>
+        <target state="new">Member of class or interface type cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="ERR_SingleElementPositionalPatternRequiresDisambiguation">
         <source>A single-element deconstruct pattern requires some other syntax for disambiguation. It is recommended to add a discard designator '_' after the close paren ')'.</source>
         <target state="translated">Tek öğeli bir ayrıştırma deseni, kesinleştirme için başka bir söz dizimi gerektirir. ')' kapanış parantezinden sonra '_' atma belirleyicisinin eklenmesi önerilir.</target>
@@ -285,6 +325,16 @@
       <trans-unit id="ERR_StaticLocalFunctionCannotCaptureVariable">
         <source>A static local function cannot contain a reference to '{0}'.</source>
         <target state="translated">Statik bir yerel işlev, '{0}' başvurusu içeremez.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_StaticMemberCantBeReadOnly">
+        <source>Static member '{0}' cannot be 'readonly'.</source>
+        <target state="new">Static member '{0}' cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_StaticMemberCantBeReadOnly_Title">
+        <source>Static member cannot be 'readonly'.</source>
+        <target state="new">Static member cannot be 'readonly'.</target>
         <note />
       </trans-unit>
       <trans-unit id="ERR_SwitchArmSubsumed">

@@ -1686,7 +1686,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         WRN_ImplicitCopyInReadOnlyMember = 8655,
         ERR_ReferenceTypeMemberCantBeReadOnly = 8656,
         ERR_StaticMemberCantBeReadOnly = 8657,
-        ERR_AutoPropertyCantBeReadOnly = 8658
+        ERR_AutoPropertyCantBeReadOnly = 8658,
+        ERR_InvalidPropertyReadOnlyMods = 8659,
+        ERR_DuplicatePropertyReadOnlyMods = 8660
 
         #endregion diagnostics introduced for C# 8.0
 

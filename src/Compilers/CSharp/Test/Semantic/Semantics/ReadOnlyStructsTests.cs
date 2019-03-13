@@ -1087,9 +1087,9 @@ public struct S
 ";
             var comp = CreateCompilation(csharp);
             comp.VerifyDiagnostics(
-                // (5,32): error CS0106: The modifier 'readonly' is not valid for this item
+                // (5,32): error CS8657: Static member 'M' cannot be 'readonly'.
                 //     public static readonly int M()
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "M").WithArguments("readonly").WithLocation(5, 32));
+                Diagnostic(ErrorCode.ERR_StaticMemberCantBeReadOnly, "M").WithArguments("M").WithLocation(5, 32));
         }
 
         [Fact]
@@ -1130,9 +1130,9 @@ public struct S
 ";
             var comp = CreateCompilation(csharp);
             comp.VerifyDiagnostics(
-                // (7,18): error CS0106: The modifier 'readonly' is not valid for this item
+                // (7,18): error CS8657: Static member 'get_P' cannot be 'readonly'.
                 //         readonly get
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "get").WithArguments("readonly").WithLocation(7, 18));
+                Diagnostic(ErrorCode.ERR_StaticMemberCantBeReadOnly, "get").WithArguments("get_P").WithLocation(7, 18));
         }
 
         [Fact]

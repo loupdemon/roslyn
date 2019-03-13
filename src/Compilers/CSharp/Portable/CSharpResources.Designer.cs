@@ -3931,6 +3931,24 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Cannot specify &apos;readonly&apos; modifiers on both accessors of property or indexer &apos;{0}&apos;..
+        /// </summary>
+        internal static string ERR_DuplicatePropertyReadOnlyMods {
+            get {
+                return ResourceManager.GetString("ERR_DuplicatePropertyReadOnlyMods", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot specify &apos;readonly&apos; modifiers on both accessors of property or indexer..
+        /// </summary>
+        internal static string ERR_DuplicatePropertyReadOnlyMods_Title {
+            get {
+                return ResourceManager.GetString("ERR_DuplicatePropertyReadOnlyMods_Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to &apos;{0}&apos; duplicate TypeForwardedToAttribute.
         /// </summary>
         internal static string ERR_DuplicateTypeForwarder {
@@ -6249,6 +6267,24 @@ namespace Microsoft.CodeAnalysis.CSharp {
         internal static string ERR_InvalidPropertyAccessMod {
             get {
                 return ResourceManager.GetString("ERR_InvalidPropertyAccessMod", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot specify &apos;readonly&apos; modifiers on both property or indexer &apos;{0}&apos; and its accessors..
+        /// </summary>
+        internal static string ERR_InvalidPropertyReadOnlyMods {
+            get {
+                return ResourceManager.GetString("ERR_InvalidPropertyReadOnlyMods", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cannot specify &apos;readonly&apos; modifiers on both property or indexer and its accessors..
+        /// </summary>
+        internal static string ERR_InvalidPropertyReadOnlyMods_Title {
+            get {
+                return ResourceManager.GetString("ERR_InvalidPropertyReadOnlyMods_Title", resourceCulture);
             }
         }
         

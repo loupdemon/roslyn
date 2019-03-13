@@ -179,15 +179,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 _isAutoProperty = notRegularProperty && hasGetSyntax;
                 bool isGetterOnly = hasGetSyntax && setSyntax == null;
 
-                if (_isAutoProperty)
+                if (_isAutoProperty && !IsStatic)
                 {
-                    if (!IsStatic && !isGetterOnly && ContainingType.IsReadOnly)
+                    if (!isGetterOnly && ContainingType.IsReadOnly)
                     {
                         diagnostics.Add(ErrorCode.ERR_AutoPropsInRoStruct, location);
                     }
                     else if (HasReadOnlyModifier)
                     {
-                        diagnostics.Add(ErrorCode.ERR_BadMemberFlag, location, SyntaxFacts.GetText(SyntaxKind.ReadOnlyKeyword));
+                        diagnostics.Add(ErrorCode.ERR_AutoPropertyCantBeReadOnly, location, Name);
                     }
                 }
 
@@ -361,6 +361,10 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                     {
                         // Check accessibility is set on at most one accessor.
                         diagnostics.Add(ErrorCode.ERR_DuplicatePropertyAccessMods, location, this);
+                    }
+                    else if (_getMethod.IsDeclaredReadOnly && _setMethod.IsDeclaredReadOnly)
+                    {
+                        diagnostics.Add(ErrorCode.ERR_DuplicatePropertyReadOnlyMods, location, this);
                     }
                     else if (this.IsAbstract)
                     {
@@ -906,8 +910,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
             else if (IsStatic && HasReadOnlyModifier)
             {
-                // The modifier '{0}' is not valid for this item
-                diagnostics.Add(ErrorCode.ERR_BadMemberFlag, location, SyntaxFacts.GetText(SyntaxKind.ReadOnlyKeyword));
+                // Static member '{0}' cannot be 'readonly'.
+                diagnostics.Add(ErrorCode.ERR_StaticMemberCantBeReadOnly, location, this);
             }
             else if (IsOverride && (IsNew || IsVirtual))
             {

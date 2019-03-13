@@ -32,6 +32,16 @@
         <target state="translated">No se puede usar el tipo "{0}?" que acepta valores NULL en una expresión as; use en su lugar el tipo "{0}" subyacente.</target>
         <note />
       </trans-unit>
+      <trans-unit id="ERR_AutoPropertyCantBeReadOnly">
+        <source>Auto-implemented property or accessor '{0}' cannot be 'readonly'.</source>
+        <target state="new">Auto-implemented property or accessor '{0}' cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_AutoPropertyCantBeReadOnly_Title">
+        <source>Auto-implemented property or accessor cannot be 'readonly'.</source>
+        <target state="new">Auto-implemented property or accessor cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="ERR_AwaitForEachMissingMember">
         <source>Asynchronous foreach statement cannot operate on variables of type '{0}' because '{0}' does not contain a suitable public instance definition for '{1}'</source>
         <target state="translated">Una instrucción foreach asincrónica no puede funcionar en variables de tipo "{0}", porque "{0}" no contiene una definición de instancia pública adecuada para "{1}".</target>
@@ -85,6 +95,16 @@
       <trans-unit id="ERR_DuplicateExplicitImpl">
         <source>'{0}' is explicitly implemented more than once.</source>
         <target state="translated">"{0}" está implementado de forma explícita más de una vez.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_DuplicatePropertyReadOnlyMods">
+        <source>Cannot specify 'readonly' modifiers on both accessors of property or indexer '{0}'.</source>
+        <target state="new">Cannot specify 'readonly' modifiers on both accessors of property or indexer '{0}'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_DuplicatePropertyReadOnlyMods_Title">
+        <source>Cannot specify 'readonly' modifiers on both accessors of property or indexer.</source>
+        <target state="new">Cannot specify 'readonly' modifiers on both accessors of property or indexer.</target>
         <note />
       </trans-unit>
       <trans-unit id="ERR_ElseCannotStartStatement">
@@ -182,6 +202,16 @@
         <target state="translated">Creación de objeto no válida</target>
         <note />
       </trans-unit>
+      <trans-unit id="ERR_InvalidPropertyReadOnlyMods">
+        <source>Cannot specify 'readonly' modifiers on both property or indexer '{0}' and its accessors.</source>
+        <target state="new">Cannot specify 'readonly' modifiers on both property or indexer '{0}' and its accessors.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_InvalidPropertyReadOnlyMods_Title">
+        <source>Cannot specify 'readonly' modifiers on both property or indexer and its accessors.</source>
+        <target state="new">Cannot specify 'readonly' modifiers on both property or indexer and its accessors.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="ERR_InvalidStackAllocArray">
         <source>"Invalid rank specifier: expected ']'</source>
         <target state="translated">"Especificador de rango no válido: se esperaba "]""</target>
@@ -272,6 +302,16 @@
         <target state="translated">La parte izquierda de una asignación de referencias debe ser una referencia local o un parámetro.</target>
         <note />
       </trans-unit>
+      <trans-unit id="ERR_ReferenceTypeMemberCantBeReadOnly">
+        <source>Member '{0}' of class or interface type '{1}' cannot be 'readonly'.</source>
+        <target state="new">Member '{0}' of class or interface type '{1}' cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_ReferenceTypeMemberCantBeReadOnly_Title">
+        <source>Member of class or interface type cannot be 'readonly'.</source>
+        <target state="new">Member of class or interface type cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="ERR_SingleElementPositionalPatternRequiresDisambiguation">
         <source>A single-element deconstruct pattern requires some other syntax for disambiguation. It is recommended to add a discard designator '_' after the close paren ')'.</source>
         <target state="translated">Un patrón de deconstrucción de un solo elemento requiere más sintaxis para la desambiguación. Se recomienda agregar un designador de descarte "_" después del paréntesis de cierre ")".</target>
@@ -285,6 +325,16 @@
       <trans-unit id="ERR_StaticLocalFunctionCannotCaptureVariable">
         <source>A static local function cannot contain a reference to '{0}'.</source>
         <target state="translated">Una función local estática no puede contener una referencia a "{0}".</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_StaticMemberCantBeReadOnly">
+        <source>Static member '{0}' cannot be 'readonly'.</source>
+        <target state="new">Static member '{0}' cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_StaticMemberCantBeReadOnly_Title">
+        <source>Static member cannot be 'readonly'.</source>
+        <target state="new">Static member cannot be 'readonly'.</target>
         <note />
       </trans-unit>
       <trans-unit id="ERR_SwitchArmSubsumed">

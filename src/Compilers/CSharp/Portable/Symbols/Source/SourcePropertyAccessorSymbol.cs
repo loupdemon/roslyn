@@ -210,8 +210,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             bool modifierErrors;
             var declarationModifiers = this.MakeModifiers(syntax, location, diagnostics, out modifierErrors);
 
-            // Include modifiers from the containing property.
-            propertyModifiers &= ~DeclarationModifiers.AccessibilityMask;
+            // Include some modifiers from the containing property.
+            propertyModifiers &= ~(DeclarationModifiers.AccessibilityMask | DeclarationModifiers.ReadOnly);
             if ((declarationModifiers & DeclarationModifiers.Private) != 0)
             {
                 // Private accessors cannot be virtual.
@@ -409,6 +409,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             get { return ModifierUtils.EffectiveAccessibility(this.DeclarationModifiers); }
         }
 
+        /// <summary>
+        /// Indicates whether this accessor itself has a 'readonly' modifier.
+        /// </summary>
+        internal bool LocalDeclaredReadOnly => (DeclarationModifiers & DeclarationModifiers.ReadOnly) != 0;
+
+        /// <summary>
+        /// Indicates whether this accessor or its containing property has a 'readonly' modifier.
+        /// </summary>
+        internal sealed override bool IsDeclaredReadOnly => LocalDeclaredReadOnly || _property.HasReadOnlyModifier;
+
         private DeclarationModifiers MakeModifiers(AccessorDeclarationSyntax syntax, Location location, DiagnosticBag diagnostics, out bool modifierErrors)
         {
             // No default accessibility. If unset, accessibility
@@ -417,7 +427,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
             // Check that the set of modifiers is allowed
             DeclarationModifiers allowedModifiers = DeclarationModifiers.AccessibilityMask;
-            if (this.ContainingType.IsStructType() && !_property.HasReadOnlyModifier)
+            if (this.ContainingType.IsStructType())
             {
                 allowedModifiers |= DeclarationModifiers.ReadOnly;
             }
@@ -462,10 +472,23 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             {
                 diagnostics.Add(AccessCheck.GetProtectedMemberInSealedTypeError(ContainingType), location, this);
             }
-            else if ((IsStatic || _isAutoPropertyAccessor) && IsDeclaredReadOnly && !_property.HasReadOnlyModifier)
+            else if (LocalDeclaredReadOnly)
             {
-                // The modifier '{0}' is not valid for this item
-                diagnostics.Add(ErrorCode.ERR_BadMemberFlag, location, SyntaxFacts.GetText(SyntaxKind.ReadOnlyKeyword));
+                if (_property.HasReadOnlyModifier)
+                {
+                    // Cannot specify 'readonly' modifiers on both property or indexer '{0}' and its accessors.
+                    diagnostics.Add(ErrorCode.ERR_InvalidPropertyReadOnlyMods, location, _property.Name);
+                }
+                if (IsStatic)
+                {
+                    // Static member '{0}' cannot be 'readonly'.
+                    diagnostics.Add(ErrorCode.ERR_StaticMemberCantBeReadOnly, location, Name);
+                }
+                else if (_isAutoPropertyAccessor)
+                {
+                    // Auto-implemented property or accessor '{0}' cannot be 'readonly'.
+                    diagnostics.Add(ErrorCode.ERR_AutoPropertyCantBeReadOnly, location, Name);
+                }
             }
         }
 
