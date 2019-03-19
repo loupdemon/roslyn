@@ -1087,9 +1087,9 @@ public struct S
 ";
             var comp = CreateCompilation(csharp);
             comp.VerifyDiagnostics(
-                // (5,32): error CS8657: Static member 'M' cannot be 'readonly'.
+                // (5,32): error CS8657: Static member 'S.M()' cannot be 'readonly'.
                 //     public static readonly int M()
-                Diagnostic(ErrorCode.ERR_StaticMemberCantBeReadOnly, "M").WithArguments("M").WithLocation(5, 32));
+                Diagnostic(ErrorCode.ERR_StaticMemberCantBeReadOnly, "M").WithArguments("S.M()").WithLocation(5, 32));
         }
 
         [Fact]
@@ -1130,9 +1130,9 @@ public struct S
 ";
             var comp = CreateCompilation(csharp);
             comp.VerifyDiagnostics(
-                // (7,18): error CS8657: Static member 'get_P' cannot be 'readonly'.
+                // (7,18): error CS8657: Static member 'S.P.get' cannot be 'readonly'.
                 //         readonly get
-                Diagnostic(ErrorCode.ERR_StaticMemberCantBeReadOnly, "get").WithArguments("get_P").WithLocation(7, 18));
+                Diagnostic(ErrorCode.ERR_StaticMemberCantBeReadOnly, "get").WithArguments("S.P.get").WithLocation(7, 18));
         }
 
         [Fact]
@@ -1217,12 +1217,6 @@ public struct S
                 // (8,25): error CS8658: Auto-implemented property or accessor 'P5' cannot be 'readonly'.
                 //     public readonly int P5 { get; set; }
                 Diagnostic(ErrorCode.ERR_AutoPropertyCantBeReadOnly, "P5").WithArguments("P5").WithLocation(8, 25),
-                // (8,30): error CS8659: Cannot specify 'readonly' modifiers on both property or indexer 'S.P5' and its accessors.
-                //     public readonly int P5 { get; set; }
-                Diagnostic(ErrorCode.ERR_InvalidPropertyReadOnlyMods, "get").WithArguments("S.P5").WithLocation(8, 30),
-                // (8,30): error CS8658: Auto-implemented property or accessor 'S.P5.get' cannot be 'readonly'.
-                //     public readonly int P5 { get; set; }
-                Diagnostic(ErrorCode.ERR_AutoPropertyCantBeReadOnly, "get").WithArguments("S.P5.get").WithLocation(8, 30),
                 // (9,25): error CS8658: Auto-implemented property or accessor 'P6' cannot be 'readonly'.
                 //     public readonly int P6 { readonly get; }
                 Diagnostic(ErrorCode.ERR_AutoPropertyCantBeReadOnly, "P6").WithArguments("P6").WithLocation(9, 25),
@@ -1245,9 +1239,9 @@ public struct S
 ";
             var comp = CreateCompilation(csharp);
             comp.VerifyDiagnostics(
-                // (4,38): error CS0106: The modifier 'readonly' is not valid for this item
-                //     public readonly int P { readonly get; }
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "get").WithArguments("readonly").WithLocation(4, 38));
+                // (4,38): error CS8659: Cannot specify 'readonly' modifiers on both property or indexer 'S.P' and its accessors.
+                //     public readonly int P { readonly get => 42; }
+                Diagnostic(ErrorCode.ERR_InvalidPropertyReadOnlyMods, "get").WithArguments("S.P").WithLocation(4, 38));
         }
 
         [Fact]
@@ -1684,10 +1678,10 @@ public struct S1
             var csharp = @"
 public struct S1
 {
-    public int this[int i]
+    public readonly int this[int i]
     {
-        readonly get => 42;
-        readonly set {}
+        get => 42;
+        set {}
     }
 }
 ";
