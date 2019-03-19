@@ -941,7 +941,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             else if (IsStatic && IsDeclaredReadOnly)
             {
                 // Static member '{0}' cannot be 'readonly'.
-                diagnostics.Add(ErrorCode.ERR_StaticMemberCantBeReadOnly, location, Name);
+                diagnostics.Add(ErrorCode.ERR_StaticMemberCantBeReadOnly, location, this);
             }
             else if (IsAbstract && !ContainingType.IsAbstract && (ContainingType.TypeKind == TypeKind.Class || ContainingType.TypeKind == TypeKind.Submission))
             {

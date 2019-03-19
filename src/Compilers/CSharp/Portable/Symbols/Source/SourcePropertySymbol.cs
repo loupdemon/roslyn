@@ -362,7 +362,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                         // Check accessibility is set on at most one accessor.
                         diagnostics.Add(ErrorCode.ERR_DuplicatePropertyAccessMods, location, this);
                     }
-                    else if (_getMethod.IsDeclaredReadOnly && _setMethod.IsDeclaredReadOnly)
+                    else if (_getMethod.LocalDeclaredReadOnly && _setMethod.LocalDeclaredReadOnly)
                     {
                         diagnostics.Add(ErrorCode.ERR_DuplicatePropertyReadOnlyMods, location, this);
                     }

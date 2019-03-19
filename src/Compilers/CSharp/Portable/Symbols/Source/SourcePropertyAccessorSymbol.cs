@@ -152,8 +152,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             _isExpressionBodied = true;
 
             // The modifiers for the accessor are the same as the modifiers for the property,
-            // minus the indexer bit
-            var declarationModifiers = propertyModifiers & ~DeclarationModifiers.Indexer;
+            // minus the indexer and readonly bit
+            var declarationModifiers = propertyModifiers & ~(DeclarationModifiers.Indexer | DeclarationModifiers.ReadOnly);
 
             // ReturnsVoid property is overridden in this class so
             // returnsVoid argument to MakeFlags is ignored.
@@ -218,12 +218,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 propertyModifiers &= ~DeclarationModifiers.Virtual;
             }
             declarationModifiers |= propertyModifiers & ~DeclarationModifiers.Indexer;
-
-            // auto-implemented struct getters are implicitly 'readonly'
-            if (containingType.IsStructType() && !property.IsStatic && isAutoPropertyAccessor && methodKind == MethodKind.PropertyGet)
-            {
-                declarationModifiers |= DeclarationModifiers.ReadOnly;
-            }
 
             // ReturnsVoid property is overridden in this class so
             // returnsVoid argument to MakeFlags is ignored.
@@ -417,7 +411,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         /// <summary>
         /// Indicates whether this accessor or its containing property has a 'readonly' modifier.
         /// </summary>
-        internal sealed override bool IsDeclaredReadOnly => LocalDeclaredReadOnly || _property.HasReadOnlyModifier;
+        internal override bool IsDeclaredReadOnly => LocalDeclaredReadOnly || _property.HasReadOnlyModifier ||
+            // auto-implemented struct getters are implicitly 'readonly'
+            (ContainingType.IsStructType() && !_property.IsStatic && _isAutoPropertyAccessor && MethodKind == MethodKind.PropertyGet);
 
         private DeclarationModifiers MakeModifiers(AccessorDeclarationSyntax syntax, Location location, DiagnosticBag diagnostics, out bool modifierErrors)
         {
@@ -477,17 +473,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 if (_property.HasReadOnlyModifier)
                 {
                     // Cannot specify 'readonly' modifiers on both property or indexer '{0}' and its accessors.
-                    diagnostics.Add(ErrorCode.ERR_InvalidPropertyReadOnlyMods, location, _property.Name);
+                    diagnostics.Add(ErrorCode.ERR_InvalidPropertyReadOnlyMods, location, _property);
                 }
                 if (IsStatic)
                 {
                     // Static member '{0}' cannot be 'readonly'.
-                    diagnostics.Add(ErrorCode.ERR_StaticMemberCantBeReadOnly, location, Name);
+                    diagnostics.Add(ErrorCode.ERR_StaticMemberCantBeReadOnly, location, this);
                 }
                 else if (_isAutoPropertyAccessor)
                 {
                     // Auto-implemented property or accessor '{0}' cannot be 'readonly'.
-                    diagnostics.Add(ErrorCode.ERR_AutoPropertyCantBeReadOnly, location, Name);
+                    diagnostics.Add(ErrorCode.ERR_AutoPropertyCantBeReadOnly, location, this);
                 }
             }
         }

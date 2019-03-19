@@ -1147,9 +1147,9 @@ public struct S
 ";
             var comp = CreateCompilation(csharp);
             comp.VerifyDiagnostics(
-                // (5,32): error CS0106: The modifier 'readonly' is not valid for this item
+                // (5,32): error CS8657: Static member 'S.P' cannot be 'readonly'.
                 //     public static readonly int P => i;
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "P").WithArguments("readonly").WithLocation(5, 32));
+                Diagnostic(ErrorCode.ERR_StaticMemberCantBeReadOnly, "P").WithArguments("S.P").WithLocation(5, 32));
         }
 
         [Fact]
@@ -1196,30 +1196,42 @@ public struct S
 ";
             var comp = CreateCompilation(csharp);
             comp.VerifyDiagnostics(
-                // (4,30): error CS0106: The modifier 'readonly' is not valid for this item
+                // (4,30): error CS8658: Auto-implemented property or accessor 'S.P1.get' cannot be 'readonly'.
                 //     public int P1 { readonly get; }
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "get").WithArguments("readonly").WithLocation(4, 30),
-                // (5,25): error CS0106: The modifier 'readonly' is not valid for this item
+                Diagnostic(ErrorCode.ERR_AutoPropertyCantBeReadOnly, "get").WithArguments("S.P1.get").WithLocation(4, 30),
+                // (5,25): error CS8658: Auto-implemented property or accessor 'P2' cannot be 'readonly'.
                 //     public readonly int P2 { get; }
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "P2").WithArguments("readonly").WithLocation(5, 25),
-                // (6,30): error CS0106: The modifier 'readonly' is not valid for this item
+                Diagnostic(ErrorCode.ERR_AutoPropertyCantBeReadOnly, "P2").WithArguments("P2").WithLocation(5, 25),
+                // (6,30): error CS8658: Auto-implemented property or accessor 'S.P3.get' cannot be 'readonly'.
                 //     public int P3 { readonly get; set; }
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "get").WithArguments("readonly").WithLocation(6, 30),
-                // (7,30): error CS0106: The modifier 'readonly' is not valid for this item
+                Diagnostic(ErrorCode.ERR_AutoPropertyCantBeReadOnly, "get").WithArguments("S.P3.get").WithLocation(6, 30),
+                // (7,16): error CS8660: Cannot specify 'readonly' modifiers on both accessors of property or indexer 'S.P4'.
                 //     public int P4 { readonly get; readonly set; }
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "get").WithArguments("readonly").WithLocation(7, 30),
-                // (7,44): error CS0106: The modifier 'readonly' is not valid for this item
+                Diagnostic(ErrorCode.ERR_DuplicatePropertyReadOnlyMods, "P4").WithArguments("S.P4").WithLocation(7, 16),
+                // (7,30): error CS8658: Auto-implemented property or accessor 'S.P4.get' cannot be 'readonly'.
                 //     public int P4 { readonly get; readonly set; }
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "set").WithArguments("readonly").WithLocation(7, 44),
-                // (8,25): error CS0106: The modifier 'readonly' is not valid for this item
+                Diagnostic(ErrorCode.ERR_AutoPropertyCantBeReadOnly, "get").WithArguments("S.P4.get").WithLocation(7, 30),
+                // (7,44): error CS8658: Auto-implemented property or accessor 'S.P4.set' cannot be 'readonly'.
+                //     public int P4 { readonly get; readonly set; }
+                Diagnostic(ErrorCode.ERR_AutoPropertyCantBeReadOnly, "set").WithArguments("S.P4.set").WithLocation(7, 44),
+                // (8,25): error CS8658: Auto-implemented property or accessor 'P5' cannot be 'readonly'.
                 //     public readonly int P5 { get; set; }
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "P5").WithArguments("readonly").WithLocation(8, 25),
-                // (9,25): error CS0106: The modifier 'readonly' is not valid for this item
+                Diagnostic(ErrorCode.ERR_AutoPropertyCantBeReadOnly, "P5").WithArguments("P5").WithLocation(8, 25),
+                // (8,30): error CS8659: Cannot specify 'readonly' modifiers on both property or indexer 'S.P5' and its accessors.
+                //     public readonly int P5 { get; set; }
+                Diagnostic(ErrorCode.ERR_InvalidPropertyReadOnlyMods, "get").WithArguments("S.P5").WithLocation(8, 30),
+                // (8,30): error CS8658: Auto-implemented property or accessor 'S.P5.get' cannot be 'readonly'.
+                //     public readonly int P5 { get; set; }
+                Diagnostic(ErrorCode.ERR_AutoPropertyCantBeReadOnly, "get").WithArguments("S.P5.get").WithLocation(8, 30),
+                // (9,25): error CS8658: Auto-implemented property or accessor 'P6' cannot be 'readonly'.
                 //     public readonly int P6 { readonly get; }
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "P6").WithArguments("readonly").WithLocation(9, 25),
-                // (9,39): error CS0106: The modifier 'readonly' is not valid for this item
+                Diagnostic(ErrorCode.ERR_AutoPropertyCantBeReadOnly, "P6").WithArguments("P6").WithLocation(9, 25),
+                // (9,39): error CS8659: Cannot specify 'readonly' modifiers on both property or indexer 'S.P6' and its accessors.
                 //     public readonly int P6 { readonly get; }
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "get").WithArguments("readonly").WithLocation(9, 39));
+                Diagnostic(ErrorCode.ERR_InvalidPropertyReadOnlyMods, "get").WithArguments("S.P6").WithLocation(9, 39),
+                // (9,39): error CS8658: Auto-implemented property or accessor 'S.P6.get' cannot be 'readonly'.
+                //     public readonly int P6 { readonly get; }
+                Diagnostic(ErrorCode.ERR_AutoPropertyCantBeReadOnly, "get").WithArguments("S.P6.get").WithLocation(9, 39));
         }
 
         [Fact]
@@ -1250,12 +1262,12 @@ public struct S
 ";
             var comp = CreateCompilation(csharp);
             comp.VerifyDiagnostics(
-                // (4,32): error CS0106: The modifier 'readonly' is not valid for this item
+                // (4,32): error CS8657: Static member 'S.P1' cannot be 'readonly'.
                 //     public static readonly int P1 { get; set; }
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "P1").WithArguments("readonly").WithLocation(4, 32),
-                // (5,37): error CS0106: The modifier 'readonly' is not valid for this item
+                Diagnostic(ErrorCode.ERR_StaticMemberCantBeReadOnly, "P1").WithArguments("S.P1").WithLocation(4, 32),
+                // (5,37): error CS8657: Static member 'S.P2.get' cannot be 'readonly'.
                 //     public static int P2 { readonly get; }
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "get").WithArguments("readonly").WithLocation(5, 37));
+                Diagnostic(ErrorCode.ERR_StaticMemberCantBeReadOnly, "get").WithArguments("S.P2.get").WithLocation(5, 37));
         }
 
         [Fact]
