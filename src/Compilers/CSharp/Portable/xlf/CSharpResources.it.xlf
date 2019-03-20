@@ -162,6 +162,16 @@
         <target state="translated">La funzionalità '{0}' non è disponibile in C# 8.0. Usare la versione {1} o versioni successive del linguaggio.</target>
         <note />
       </trans-unit>
+      <trans-unit id="ERR_FieldLikeEventCantBeReadOnly">
+        <source>Field-like event '{0}' cannot be 'readonly'.</source>
+        <target state="new">Field-like event '{0}' cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ERR_FieldLikeEventCantBeReadOnly_Title">
+        <source>Field-like event cannot be 'readonly'.</source>
+        <target state="new">Field-like event cannot be 'readonly'.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="ERR_ForEachMissingMemberWrongAsync">
         <source>foreach statement cannot operate on variables of type '{0}' because '{0}' does not contain a public instance definition for '{1}'. Did you mean 'await foreach' rather than 'foreach'?</source>
         <target state="translated">L'istruzione foreach non può funzionare con variabili di tipo '{0}' perché '{0}' non contiene una definizione di istanza pubblica per '{1}'. Si intendeva 'await foreach' invece di 'foreach'?</target>

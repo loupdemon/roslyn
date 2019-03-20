@@ -1703,9 +1703,9 @@ public struct S1
 ";
             var comp = CreateCompilation(csharp);
             comp.VerifyDiagnostics(
-                // (6,45): error CS0106: The modifier 'readonly' is not valid for this item
+                // (6,45): error CS8661: Field-like event 'S1.E' cannot be 'readonly'.
                 //     public readonly event Action<EventArgs> E;
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "E").WithArguments("readonly").WithLocation(6, 45));
+                Diagnostic(ErrorCode.ERR_FieldLikeEventCantBeReadOnly, "E").WithArguments("S1.E").WithLocation(6, 45));
         }
 
         [Fact]
@@ -1744,9 +1744,9 @@ public struct S1
 ";
             var comp = CreateCompilation(csharp);
             comp.VerifyDiagnostics(
-                // (6,52): error CS0106: The modifier 'readonly' is not valid for this item
+                // (6,52): error CS8657: Static member 'S1.E' cannot be 'readonly'.
                 //     public static readonly event Action<EventArgs> E
-                Diagnostic(ErrorCode.ERR_BadMemberFlag, "E").WithArguments("readonly").WithLocation(6, 52));
+                Diagnostic(ErrorCode.ERR_StaticMemberCantBeReadOnly, "E").WithArguments("S1.E").WithLocation(6, 52));
         }
 
         [Fact]

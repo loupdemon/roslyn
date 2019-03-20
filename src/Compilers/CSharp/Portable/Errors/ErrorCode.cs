@@ -1688,7 +1688,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_StaticMemberCantBeReadOnly = 8657,
         ERR_AutoPropertyCantBeReadOnly = 8658,
         ERR_InvalidPropertyReadOnlyMods = 8659,
-        ERR_DuplicatePropertyReadOnlyMods = 8660
+        ERR_DuplicatePropertyReadOnlyMods = 8660,
+        ERR_FieldLikeEventCantBeReadOnly = 8661
 
         #endregion diagnostics introduced for C# 8.0
 

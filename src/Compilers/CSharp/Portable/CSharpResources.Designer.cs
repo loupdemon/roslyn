@@ -4975,6 +4975,24 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Field-like event &apos;{0}&apos; cannot be &apos;readonly&apos;..
+        /// </summary>
+        internal static string ERR_FieldLikeEventCantBeReadOnly {
+            get {
+                return ResourceManager.GetString("ERR_FieldLikeEventCantBeReadOnly", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Field-like event cannot be &apos;readonly&apos;..
+        /// </summary>
+        internal static string ERR_FieldLikeEventCantBeReadOnly_Title {
+            get {
+                return ResourceManager.GetString("ERR_FieldLikeEventCantBeReadOnly_Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Field-like events are not allowed in readonly structs..
         /// </summary>
         internal static string ERR_FieldlikeEventsInRoStruct {
