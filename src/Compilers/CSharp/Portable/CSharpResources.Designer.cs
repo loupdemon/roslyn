@@ -826,7 +826,7 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Auto-implemented property or accessor &apos;{0}&apos; cannot be &apos;readonly&apos;..
+        ///   Looks up a localized string similar to Auto-implemented property or accessor &apos;{0}&apos; cannot be marked &apos;readonly&apos;..
         /// </summary>
         internal static string ERR_AutoPropertyCantBeReadOnly {
             get {
@@ -835,7 +835,7 @@ namespace Microsoft.CodeAnalysis.CSharp {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Auto-implemented property or accessor cannot be &apos;readonly&apos;..
+        ///   Looks up a localized string similar to Auto-implemented property or accessor cannot be marked &apos;readonly&apos;..
         /// </summary>
         internal static string ERR_AutoPropertyCantBeReadOnly_Title {
             get {

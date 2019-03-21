@@ -33,13 +33,13 @@
         <note />
       </trans-unit>
       <trans-unit id="ERR_AutoPropertyCantBeReadOnly">
-        <source>Auto-implemented property or accessor '{0}' cannot be 'readonly'.</source>
-        <target state="new">Auto-implemented property or accessor '{0}' cannot be 'readonly'.</target>
+        <source>Auto-implemented property or accessor '{0}' cannot be marked 'readonly'.</source>
+        <target state="new">Auto-implemented property or accessor '{0}' cannot be marked 'readonly'.</target>
         <note />
       </trans-unit>
       <trans-unit id="ERR_AutoPropertyCantBeReadOnly_Title">
-        <source>Auto-implemented property or accessor cannot be 'readonly'.</source>
-        <target state="new">Auto-implemented property or accessor cannot be 'readonly'.</target>
+        <source>Auto-implemented property or accessor cannot be marked 'readonly'.</source>
+        <target state="new">Auto-implemented property or accessor cannot be marked 'readonly'.</target>
         <note />
       </trans-unit>
       <trans-unit id="ERR_AwaitForEachMissingMember">
