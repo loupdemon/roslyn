@@ -396,7 +396,81 @@ namespace Microsoft.CodeAnalysis.CSharp
             _snapshotBuilderOpt?.TakeIncrementalSnapshot(methodMainNode, State);
 
             ImmutableArray<PendingBranch> pendingReturns = base.Scan(ref badRegion);
+
+            ReportUninitializedNonNullableReferenceTypeFields();
+
             return pendingReturns;
+        }
+
+        private static bool HasThisConstructorInitializer(MethodSymbol method)
+        {
+            Debug.Assert(method.DeclaringSyntaxReferences.Length <= 1);
+            var syntax = method.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() as ConstructorDeclarationSyntax;
+            return syntax?.Initializer?.Kind() == SyntaxKind.ThisConstructorInitializer;
+        }
+
+        private void ReportUninitializedNonNullableReferenceTypeFields()
+        {
+            if (!(_symbol is MethodSymbol method))
+            {
+                return;
+            }
+
+            if (method.MethodKind != MethodKind.Constructor || HasThisConstructorInitializer(method) || method.ContainingType.IsValueType)
+            {
+                return;
+            }
+
+            var thisParameter = MethodThisParameter;
+            int thisSlot = VariableSlot(thisParameter);
+            if (thisSlot == -1 || !State.Reachable)
+            {
+                return;
+            }
+
+            var thisType = thisParameter.Type;
+            Debug.Assert(thisType.IsDefinition);
+
+            foreach (var member in thisType.GetMembersUnordered())
+            {
+                if (member.Kind != SymbolKind.Field)
+                {
+                    // https://github.com/dotnet/roslyn/issues/30067 Handle events.
+                    continue;
+                }
+                var field = (FieldSymbol)member;
+                // https://github.com/dotnet/roslyn/issues/30067 Can the HasInitializer
+                // call be removed, if the body already contains the initializers?
+                if (field.IsStatic || HasInitializer(field))
+                {
+                    continue;
+                }
+                var fieldType = field.TypeWithAnnotations;
+                if (fieldType.Type.IsValueType || fieldType.Type.IsErrorType())
+                {
+                    continue;
+                }
+                if (!fieldType.NullableAnnotation.IsNotAnnotated() && !fieldType.Type.IsTypeParameterDisallowingAnnotation())
+                {
+                    continue;
+                }
+                var fieldOrProperty = (Symbol)(field.AssociatedSymbol as PropertySymbol) ?? field;
+                int fieldSlot = VariableSlot(fieldOrProperty, thisSlot);
+                if (fieldSlot == -1 || this.State[fieldSlot].MayBeNull())
+                {
+                    var location = (method.DeclaringSyntaxReferences.IsEmpty
+                        ? fieldOrProperty // default constructor, use the field location
+                        : method).Locations[0];
+                    Diagnostics.Add(ErrorCode.WRN_UninitializedNonNullableField, location, fieldOrProperty.Kind.Localize(), fieldOrProperty.Name);
+                }
+            }
+        }
+
+        // todo: centralize (move to common base type? field extension?)
+        private static bool HasInitializer(FieldSymbol field)
+        {
+            return (field as SourceMemberFieldSymbol)?.HasInitializer == true ||
+                (field as SynthesizedBackingFieldSymbol)?.HasInitializer == true;
         }
 
         internal static void Analyze(
@@ -634,6 +708,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case SymbolKind.Field:
                 case SymbolKind.Property:
                 case SymbolKind.Event:
+                    // if the method is a constructor, and the symbol is a field on 'this', initialize to a MaybeNull state.
+                    var containing = variable.ContainingSlot == -1 ? (VariableIdentifier?)null : variableBySlot[variable.ContainingSlot];
+                    if (_methodSignatureOpt?.MethodKind == MethodKind.Constructor && MethodThisParameter.Equals(containing?.Symbol))
+                    {
+                        return NullableFlowState.MaybeNull;
+                    }
                     return symbol.GetTypeOrReturnType().ToTypeWithState().State;
                 case SymbolKind.ErrorType:
                     return NullableFlowState.NotNull;

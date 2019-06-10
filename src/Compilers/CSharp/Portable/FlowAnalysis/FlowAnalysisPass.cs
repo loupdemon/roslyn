@@ -38,8 +38,29 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (method.ReturnsVoid || method.IsIterator || method.IsTaskReturningAsync(compilation))
             {
-                // we don't analyze synthesized void methods.
-                if ((method.IsImplicitlyDeclared && !method.IsScriptInitializer) || Analyze(compilation, method, block, diagnostics))
+                var synthesized = method.IsImplicitlyDeclared && !method.IsScriptInitializer;
+                var appendImplicitReturn = synthesized;
+                // don't analyze synthesized void methods 
+                if (!synthesized)
+                {
+                    appendImplicitReturn = Analyze(compilation, method, block, diagnostics);
+                }
+                else
+                {
+                    // still nullable-analyze synthesized void methods to check field initialization
+                    if (compilation.LanguageVersion >= MessageID.IDS_FeatureNullableReferenceTypes.RequiredVersion())
+                    {
+                        NullableWalker.Analyze(compilation, method, block, diagnostics);
+                    }
+#if DEBUG
+                    else
+                    {
+                        NullableWalker.Analyze(compilation, method, block, new DiagnosticBag());
+                    }
+#endif
+                }
+
+                if (appendImplicitReturn)
                 {
                     block = AppendImplicitReturn(block, method, originalBodyNested);
                 }

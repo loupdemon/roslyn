@@ -890,6 +890,7 @@ class C
         {
             var source = @"
 #nullable enable
+#pragma warning disable 0649
 class C
 {
     string s1, s2;
@@ -900,15 +901,16 @@ class C
             s1 = string.Empty;
             s2 = string.Empty;
         }
+
         if (s1 == default)
             throw new System.InvalidOperationException();
     }
 }";
             var comp = CreateCompilation(source);
             comp.VerifyDiagnostics(
-                    // (6,5): warning CS8618: Non-nullable field 's2' is uninitialized.
+                    // (7,5): warning CS8618: Non-nullable field 's2' is uninitialized.
                     //     C(bool a)
-                    Diagnostic(ErrorCode.WRN_UninitializedNonNullableField, "C").WithArguments("field", "s2").WithLocation(6, 5));
+                    Diagnostic(ErrorCode.WRN_UninitializedNonNullableField, "C").WithArguments("field", "s2").WithLocation(7, 5));
         }
 
         [Fact, WorkItem(33391, "https://github.com/dotnet/roslyn/issues/33391")]
@@ -952,10 +954,7 @@ class C
     }
 }";
             var comp = CreateCompilation(source);
-            comp.VerifyDiagnostics(
-                    // (6,5): warning CS8618: Non-nullable field 's1' is uninitialized.
-                    //     C(bool a)
-                    Diagnostic(ErrorCode.WRN_UninitializedNonNullableField, "C").WithArguments("field", "s1").WithLocation(6, 5));
+            comp.VerifyDiagnostics();
         }
 
     [Fact, WorkItem(33391, "https://github.com/dotnet/roslyn/issues/33391")]
