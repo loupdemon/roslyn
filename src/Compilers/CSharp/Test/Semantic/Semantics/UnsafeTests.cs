@@ -8227,6 +8227,28 @@ class C
             CreateCompilation(text, options: TestOptions.UnsafeDebugDll).VerifyDiagnostics();
         }
 
+        [WorkItem(37051, "https://github.com/dotnet/roslyn/issues/37051")]
+        [Fact]
+        public void OverrideMethodReturningGenericPointer()
+        {
+            var text = @"using System;
+public unsafe abstract class Base
+{
+    public abstract T* Alloc<T>()
+        where T : unmanaged;
+}
+public unsafe class Derived : Base
+{
+    public override T* Alloc<T>()
+    {
+        throw new NotImplementedException();
+    }
+}";
+            var comp = CreateCompilation(text, options: TestOptions.UnsafeDebugDll);
+            var member = comp.GetMember<NamedTypeSymbol>("Derived").GetMethod("Alloc");
+            _ = member.ToString();
+            comp.VerifyDiagnostics();
+        }
 
         [WorkItem(543990, "http://vstfdevdiv:8080/DevDiv2/DevDiv/_workitems/edit/543990")]
         [Fact]
