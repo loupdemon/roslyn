@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp.Extensions;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Editing;
 using Roslyn.Utilities;
@@ -16,16 +17,16 @@ using Roslyn.Utilities;
 namespace Microsoft.CodeAnalysis.CSharp.Diagnostics.AddBraces
 {
     [ExportCodeFixProvider(LanguageNames.CSharp, Name = PredefinedCodeFixProviderNames.AddBraces), Shared]
-    [ExtensionOrder(After = PredefinedCodeFixProviderNames.AddAwait)]
-    internal sealed class CSharpAddBracesCodeFixProvider : SyntaxEditorBasedCodeFixProvider
+    //[ExtensionOrder(After = PredefinedCodeFixProviderNames.AddAwait)] // TODO: what order?
+    internal sealed class CSharpMakeMemberReadOnlyCodeFixProvider : SyntaxEditorBasedCodeFixProvider
     {
         [ImportingConstructor]
-        public CSharpAddBracesCodeFixProvider()
+        public CSharpMakeMemberReadOnlyCodeFixProvider()
         {
         }
 
         public override ImmutableArray<string> FixableDiagnosticIds
-            => ImmutableArray.Create(IDEDiagnosticIds.AddBracesDiagnosticId);
+            => ImmutableArray.Create(IDEDiagnosticIds.MakeMemberReadonlyDiagnosticId);
 
         internal sealed override CodeFixCategory CodeFixCategory => CodeFixCategory.CodeStyle;
 
@@ -45,17 +46,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Diagnostics.AddBraces
             var root = editor.OriginalRoot;
             foreach (var diagnostic in diagnostics)
             {
-                var statement = root.FindNode(diagnostic.Location.SourceSpan);
-
-                // Use the callback version of ReplaceNode so that we see the effects
-                // of other replace calls.  i.e. we may have statements nested in statements,
-                // we need to make sure that any inner edits are seen when we make the outer
-                // replacement.
-                editor.ReplaceNode(statement, (currentStatement, g) =>
+                var memberDeclaration = root.FindNode(diagnostic.Location.SourceSpan);
+                if (memberDeclaration is MethodDeclarationSyntax methodDeclaration)
                 {
-                    var embeddedStatement = currentStatement.GetEmbeddedStatement();
-                    return currentStatement.ReplaceNode(embeddedStatement, SyntaxFactory.Block(embeddedStatement));
-                });
+                    editor.ReplaceNode(methodDeclaration, methodDeclaration.AddModifiers(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword)));
+                }
+                else
+                {
+                    throw ExceptionUtilities.UnexpectedValue(memberDeclaration);
+                }
             }
 
             return Task.CompletedTask;
@@ -64,7 +63,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Diagnostics.AddBraces
         private sealed class MyCodeAction : CodeAction.DocumentChangeAction
         {
             public MyCodeAction(Func<CancellationToken, Task<Document>> createChangedDocument)
-                : base(FeaturesResources.Add_braces, createChangedDocument, FeaturesResources.Add_braces)
+                : base(FeaturesResources.Make_field_readonly, createChangedDocument, FeaturesResources.Make_field_readonly)
             {
             }
         }

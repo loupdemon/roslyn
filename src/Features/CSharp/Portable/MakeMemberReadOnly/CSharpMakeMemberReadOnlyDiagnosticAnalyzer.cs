@@ -17,10 +17,10 @@ namespace Microsoft.CodeAnalysis.CSharp.MakeMemberReadOnly
     internal class CSharpMakeMemberReadOnlyDiagnosticAnalyzer : AbstractBuiltInCodeStyleDiagnosticAnalyzer
     {
         public CSharpMakeMemberReadOnlyDiagnosticAnalyzer()
-            : base(IDEDiagnosticIds.InlineDeclarationDiagnosticId,
-                   CodeStyleOptions.PreferInlinedVariableDeclaration,
-                   new LocalizableResourceString(nameof(FeaturesResources.Inline_variable_declaration), FeaturesResources.ResourceManager, typeof(FeaturesResources)),
-                   new LocalizableResourceString(nameof(FeaturesResources.Variable_declaration_can_be_inlined), FeaturesResources.ResourceManager, typeof(FeaturesResources)))
+            : base(IDEDiagnosticIds.MakeMemberReadonlyDiagnosticId,
+                   CodeStyleOptions.PreferReadonly, // TODO: does there need to be another option for readonly members?
+                   new LocalizableResourceString(nameof(FeaturesResources.Add_readonly_modifier), FeaturesResources.ResourceManager, typeof(FeaturesResources)),
+                   new LocalizableResourceString(nameof(FeaturesResources.Make_field_readonly), FeaturesResources.ResourceManager, typeof(FeaturesResources)))
         {
         }
 
@@ -62,7 +62,13 @@ namespace Microsoft.CodeAnalysis.CSharp.MakeMemberReadOnly
                 return;
             }
 
-            var dataFlow = context.SemanticModel.AnalyzeDataFlow(node);
+            var body = node switch
+            {
+                MethodDeclarationSyntax methodSyntax => (CSharpSyntaxNode)methodSyntax.ExpressionBody?.Expression ?? methodSyntax.Body,
+                _ => throw ExceptionUtilities.UnexpectedValue(node)
+            };
+
+            var dataFlow = context.SemanticModel.AnalyzeDataFlow(body);
             if (dataFlow.Succeeded && !dataFlow.WrittenInside.Any(symbol => symbol is IParameterSymbol parameterSymbol && parameterSymbol.IsThis))
             {
                 context.ReportDiagnostic(DiagnosticHelper.Create(
@@ -72,133 +78,6 @@ namespace Microsoft.CodeAnalysis.CSharp.MakeMemberReadOnly
                     additionalLocations: ImmutableArray<Location>.Empty,
                     properties: null));
             }
-        }
-
-        private bool WouldCauseDefiniteAssignmentErrors(
-            SemanticModel semanticModel,
-            LocalDeclarationStatementSyntax localStatement,
-            BlockSyntax enclosingBlock,
-            ILocalSymbol outLocalSymbol)
-        {
-            // See if we have something like:
-            //
-            //      int i = 0;
-            //      if (Goo() || Bar(out i))
-            //      {
-            //          Console.WriteLine(i);
-            //      }
-            //
-            // In this case, inlining the 'i' would cause it to longer be definitely
-            // assigned in the WriteLine invocation.
-
-            var dataFlow = semanticModel.AnalyzeDataFlow(
-                localStatement.GetNextStatement(),
-                enclosingBlock.Statements.Last());
-            return dataFlow.DataFlowsIn.Contains(outLocalSymbol);
-        }
-
-        private SyntaxNode GetOutArgumentScope(SyntaxNode argumentExpression)
-        {
-            for (var current = argumentExpression; current != null; current = current.Parent)
-            {
-                if (current.Parent is LambdaExpressionSyntax lambda &&
-                    current == lambda.Body)
-                {
-                    // We were in a lambda.  The lambda body will be the new scope of the 
-                    // out var.
-                    return current;
-                }
-
-                // Any loop construct defines a scope for out-variables, as well as each of the following:
-                // * Using statements
-                // * Fixed statements
-                // * Try statements (specifically for exception filters)
-                switch (current.Kind())
-                {
-                    case SyntaxKind.WhileStatement:
-                    case SyntaxKind.DoStatement:
-                    case SyntaxKind.ForStatement:
-                    case SyntaxKind.ForEachStatement:
-                    case SyntaxKind.UsingStatement:
-                    case SyntaxKind.FixedStatement:
-                    case SyntaxKind.TryStatement:
-                        return current;
-                }
-
-                if (current is StatementSyntax)
-                {
-                    // We hit a statement containing the out-argument.  Statements can have one of 
-                    // two forms.  They're either parented by a block, or by another statement 
-                    // (i.e. they're an embedded statement).  If we're parented by a block, then
-                    // that block will be the scope of the new out-var.
-                    //
-                    // However, if our containing statement is not parented by a block, then that
-                    // means we have something like:
-                    //
-                    //      if (x)
-                    //          if (Try(out y))
-                    //
-                    // In this case, there is a 'virtual' block scope surrounding the embedded 'if'
-                    // statement, and that will be the scope the out-var goes into.
-                    return current.IsParentKind(SyntaxKind.Block)
-                        ? current.Parent
-                        : current;
-                }
-            }
-
-            return null;
-        }
-
-        private bool IsAccessed(
-            SemanticModel semanticModel,
-            ISymbol outSymbol,
-            BlockSyntax enclosingBlockOfLocalStatement,
-            LocalDeclarationStatementSyntax localStatement,
-            ArgumentSyntax argumentNode,
-            CancellationToken cancellationToken)
-        {
-            var localStatementStart = localStatement.Span.Start;
-            var argumentNodeStart = argumentNode.Span.Start;
-            var variableName = outSymbol.Name;
-
-            // Walk the block that the local is declared in looking for accesses.
-            // We can ignore anything prior to the actual local declaration point,
-            // and we only need to check up until we reach the out-argument.
-            foreach (var descendentNode in enclosingBlockOfLocalStatement.DescendantNodes())
-            {
-                var descendentStart = descendentNode.Span.Start;
-                if (descendentStart <= localStatementStart)
-                {
-                    // This node is before the local declaration.  Can ignore it entirely as it could
-                    // not be an access to the local.
-                    continue;
-                }
-
-                if (descendentStart >= argumentNodeStart)
-                {
-                    // We reached the out-var.  We can stop searching entirely.
-                    break;
-                }
-
-                if (descendentNode.IsKind(SyntaxKind.IdentifierName, out IdentifierNameSyntax identifierName))
-                {
-                    // See if this looks like an accessor to the local variable syntactically.
-                    if (identifierName.Identifier.ValueText == variableName)
-                    {
-                        // Confirm that it is a access of the local.
-                        var symbol = semanticModel.GetSymbolInfo(identifierName, cancellationToken).Symbol;
-                        if (outSymbol.Equals(symbol))
-                        {
-                            // We definitely accessed the local before the out-argument.  We 
-                            // can't inline this local.
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            // No accesses detected
-            return false;
         }
     }
 }
