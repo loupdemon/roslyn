@@ -125,6 +125,84 @@ struct MyStruct
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsMakeFieldReadonly)]
+        public async Task AutoProperty()
+        {
+            await TestMissingInRegularAndScriptAsync(
+@"struct MyStruct
+{
+    [|int Prop { get; set; }|]
+}");
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsMakeFieldReadonly)]
+        public async Task AutoProperty_GetterOnly()
+        {
+            await TestMissingInRegularAndScriptAsync(
+@"struct MyStruct
+{
+    [|int Prop { get; }|]
+}");
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsMakeFieldReadonly)]
+        public async Task Property_GetterCanBeReadOnly()
+        {
+            await TestInRegularAndScriptAsync(
+@"struct MyStruct
+{
+    int _field;
+    [|int Prop { get => field; set => _field = value; }|]
+}", @"struct MyStruct
+{
+    int _field;
+    [|int Prop { readonly get => field; set => _field = value; }|]
+}");
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsMakeFieldReadonly)]
+        public async Task Property_SetterCanBeReadOnly()
+        {
+            await TestInRegularAndScriptAsync(
+@"struct MyStruct
+{
+    int _field;
+    [|int Prop { get => _field++; set => _ = value; }|]
+}", @"struct MyStruct
+{
+    int _field;
+    [|int Prop { get => _field++; readonly set => _ = value; }|]
+}");
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsMakeFieldReadonly)]
+        public async Task Property_GetterOnly_CanBeReadOnly()
+        {
+            await TestInRegularAndScriptAsync(
+@"struct MyStruct
+{
+    int _field;
+    [|int Prop { get => _field;  }|]
+}", @"struct MyStruct
+{
+    int _field;
+    [|readonly int Prop { get => _field;  }|]
+}");
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsMakeFieldReadonly)]
+        public async Task Property_ExpressionBody_CanBeReadOnly()
+        {
+            await TestInRegularAndScriptAsync(
+@"struct MyStruct
+{
+    [|int Prop => 42;|]
+}", @"struct MyStruct
+{
+    [|readonly int Prop => 42;|]
+}");
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.CodeActionsMakeFieldReadonly)]
         public async Task FixAll()
         {
             await TestInRegularAndScriptAsync(

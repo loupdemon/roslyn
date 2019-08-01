@@ -28,7 +28,9 @@ namespace Microsoft.CodeAnalysis.CSharp.MakeMemberReadOnly
             => DiagnosticAnalyzerCategory.SemanticSpanAnalysis;
 
         protected override void InitializeWorker(AnalysisContext context) =>
-            context.RegisterSyntaxNodeAction(AnalyzeSyntaxNode, SyntaxKind.MethodDeclaration); // TODO: properties, accessors and events
+            context.RegisterSyntaxNodeAction(AnalyzeSyntaxNode,
+                SyntaxKind.MethodDeclaration,
+                SyntaxKind.PropertyDeclaration);
 
         private void AnalyzeSyntaxNode(SyntaxNodeAnalysisContext context)
         {
@@ -50,6 +52,33 @@ namespace Microsoft.CodeAnalysis.CSharp.MakeMemberReadOnly
                     if (CanMethodBeReadOnly(model, methodSymbol, methodBody))
                     {
                         reportDiagnostic(methodDeclaration);
+                    }
+                    break;
+
+                case (IPropertySymbol propertySymbol, PropertyDeclarationSyntax propertyDeclaration):
+                    var getterDeclaration = propertyDeclaration.AccessorList?.Accessors.FirstOrDefault(accessor => accessor.IsKind(SyntaxKind.GetAccessorDeclaration));
+                    var getterBody = (CSharpSyntaxNode)getterDeclaration?.Body ?? getterDeclaration?.ExpressionBody?.Expression ?? propertyDeclaration.ExpressionBody?.Expression;
+                    var getterCanBeReadOnly = getterBody is object && CanMethodBeReadOnly(model, propertySymbol.GetMethod, getterBody);
+
+                    var setterDeclaration = propertyDeclaration.AccessorList?.Accessors.FirstOrDefault(accessor => accessor.IsKind(SyntaxKind.SetAccessorDeclaration));
+                    var setterBody = (CSharpSyntaxNode)setterDeclaration?.Body ?? setterDeclaration?.ExpressionBody?.Expression;
+                    var setterCanBeReadOnly = setterBody is object && CanMethodBeReadOnly(model, propertySymbol.SetMethod, setterBody);
+
+                    var propertyCanBeReadOnly = (getterBody is object || setterBody is object)
+                        && (getterBody is null || getterCanBeReadOnly)
+                        && (setterBody is null || setterCanBeReadOnly);
+
+                    if (propertyCanBeReadOnly)
+                    {
+                        reportDiagnostic(propertyDeclaration);
+                    }
+                    else if (getterCanBeReadOnly)
+                    {
+                        reportDiagnostic(getterDeclaration);
+                    }
+                    else if (setterCanBeReadOnly)
+                    {
+                        reportDiagnostic(setterDeclaration);
                     }
                     break;
             };

@@ -46,13 +46,22 @@ namespace Microsoft.CodeAnalysis.CSharp.MakeMemberReadOnly
             foreach (var diagnostic in diagnostics)
             {
                 var memberDeclaration = root.FindNode(diagnostic.Location.SourceSpan);
-                if (memberDeclaration is MethodDeclarationSyntax methodDeclaration)
+                switch (memberDeclaration)
                 {
-                    editor.ReplaceNode(methodDeclaration, methodDeclaration.AddModifiers(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword)));
-                }
-                else
-                {
-                    throw ExceptionUtilities.UnexpectedValue(memberDeclaration);
+                    case MethodDeclarationSyntax methodDeclaration:
+                        editor.ReplaceNode(methodDeclaration, methodDeclaration.AddModifiers(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword)));
+                        break;
+
+                    case PropertyDeclarationSyntax propertyDeclaration:
+                        editor.ReplaceNode(propertyDeclaration, propertyDeclaration.AddModifiers(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword)));
+                        break;
+
+                    case AccessorDeclarationSyntax accessorDeclaration:
+                        editor.ReplaceNode(accessorDeclaration, accessorDeclaration.AddModifiers(SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword)));
+                        break;
+
+                    default:
+                        throw ExceptionUtilities.UnexpectedValue(memberDeclaration);
                 }
             }
 
