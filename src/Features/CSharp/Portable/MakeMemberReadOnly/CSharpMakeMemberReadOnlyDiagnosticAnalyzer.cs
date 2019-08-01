@@ -20,7 +20,7 @@ namespace Microsoft.CodeAnalysis.CSharp.MakeMemberReadOnly
             : base(IDEDiagnosticIds.MakeMemberReadonlyDiagnosticId,
                    CodeStyleOptions.PreferReadonly, // TODO: does there need to be another option for readonly members?
                    new LocalizableResourceString(nameof(FeaturesResources.Add_readonly_modifier), FeaturesResources.ResourceManager, typeof(FeaturesResources)),
-                   new LocalizableResourceString(nameof(FeaturesResources.Make_field_readonly), FeaturesResources.ResourceManager, typeof(FeaturesResources)))
+                   new LocalizableResourceString(nameof(FeaturesResources.Make_member_readonly), FeaturesResources.ResourceManager, typeof(FeaturesResources)))
         {
         }
 
@@ -42,34 +42,19 @@ namespace Microsoft.CodeAnalysis.CSharp.MakeMemberReadOnly
             var node = context.Node;
             var model = context.SemanticModel;
             var symbol = model.GetDeclaredSymbol(node);
-            var methodSymbol = symbol switch
+
+            switch (symbol, node)
             {
-                // TODO: properties, events, nulls?
-                IMethodSymbol ms => ms,
-                _ => throw ExceptionUtilities.Unreachable
+                case (IMethodSymbol methodSymbol, MethodDeclarationSyntax methodDeclaration):
+                    var methodBody = (CSharpSyntaxNode)methodDeclaration.ExpressionBody?.Expression ?? methodDeclaration.Body;
+                    if (CanMethodBeReadOnly(model, methodSymbol, methodBody))
+                    {
+                        reportDiagnostic(methodDeclaration);
+                    }
+                    break;
             };
 
-            if (methodSymbol == null || methodSymbol.IsReadOnly)
-            {
-                // error case or already readonly, no point in returning
-                return;
-            }
-
-            var containingType = model.GetDeclaredSymbol(node)?.ContainingType;
-            if (!containingType.IsStructType())
-            {
-                // can't be readonly
-                return;
-            }
-
-            var body = node switch
-            {
-                MethodDeclarationSyntax methodSyntax => (CSharpSyntaxNode)methodSyntax.ExpressionBody?.Expression ?? methodSyntax.Body,
-                _ => throw ExceptionUtilities.UnexpectedValue(node)
-            };
-
-            var dataFlow = context.SemanticModel.AnalyzeDataFlow(body);
-            if (dataFlow.Succeeded && !dataFlow.WrittenInside.Any(symbol => symbol is IParameterSymbol parameterSymbol && parameterSymbol.IsThis))
+            void reportDiagnostic(SyntaxNode node)
             {
                 context.ReportDiagnostic(DiagnosticHelper.Create(
                     Descriptor,
@@ -78,6 +63,30 @@ namespace Microsoft.CodeAnalysis.CSharp.MakeMemberReadOnly
                     additionalLocations: ImmutableArray<Location>.Empty,
                     properties: null));
             }
+        }
+
+        private bool CanMethodBeReadOnly(SemanticModel model, IMethodSymbol methodSymbol, CSharpSyntaxNode body)
+        {
+            if (methodSymbol == null || methodSymbol.IsReadOnly)
+            {
+                // error case or already readonly, no point in returning
+                return false;
+            }
+
+            var containingType = methodSymbol.ContainingType;
+            if (!containingType.IsStructType())
+            {
+                // can't be readonly
+                return false;
+            }
+
+            var dataFlow = model.AnalyzeDataFlow(body);
+            if (dataFlow.Succeeded && !dataFlow.WrittenInside.Any(symbol => symbol is IParameterSymbol parameterSymbol && parameterSymbol.IsThis))
+            {
+                return true;
+            }
+
+            return false;
         }
     }
 }

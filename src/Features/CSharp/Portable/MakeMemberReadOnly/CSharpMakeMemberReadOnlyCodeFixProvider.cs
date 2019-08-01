@@ -8,16 +8,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
-using Microsoft.CodeAnalysis.CSharp.Extensions;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Editing;
 using Roslyn.Utilities;
 
-namespace Microsoft.CodeAnalysis.CSharp.Diagnostics.AddBraces
+namespace Microsoft.CodeAnalysis.CSharp.MakeMemberReadOnly
 {
-    [ExportCodeFixProvider(LanguageNames.CSharp, Name = PredefinedCodeFixProviderNames.AddBraces), Shared]
-    //[ExtensionOrder(After = PredefinedCodeFixProviderNames.AddAwait)] // TODO: what order?
+    [ExportCodeFixProvider(LanguageNames.CSharp, Name = PredefinedCodeFixProviderNames.MakeMemberReadonly), Shared]
+    [ExtensionOrder(After = PredefinedCodeFixProviderNames.MakeFieldReadonly)]
     internal sealed class CSharpMakeMemberReadOnlyCodeFixProvider : SyntaxEditorBasedCodeFixProvider
     {
         [ImportingConstructor]

@@ -40,6 +40,7 @@ namespace Microsoft.CodeAnalysis.CodeFixes
         public const string ImplementInterface = nameof(ImplementInterface);
         public const string InsertMissingCast = nameof(InsertMissingCast);
         public const string MakeFieldReadonly = nameof(MakeFieldReadonly);
+        public const string MakeMemberReadonly = nameof(MakeMemberReadonly);
         public const string MakeStatementAsynchronous = nameof(MakeStatementAsynchronous);
         public const string MakeMethodSynchronous = nameof(MakeMethodSynchronous);
         public const string MoveMisplacedUsingDirectives = nameof(MoveMisplacedUsingDirectives);

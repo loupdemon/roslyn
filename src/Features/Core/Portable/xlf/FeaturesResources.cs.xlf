@@ -247,6 +247,11 @@
         <target state="translated">Zavést proměnnou dotazu</target>
         <note />
       </trans-unit>
+      <trans-unit id="Make_member_readonly">
+        <source>Make member readonly</source>
+        <target state="new">Make member readonly</target>
+        <note />
+      </trans-unit>
       <trans-unit id="Make_readonly_fields_writable">
         <source>Make readonly fields writable</source>
         <target state="new">Make readonly fields writable</target>

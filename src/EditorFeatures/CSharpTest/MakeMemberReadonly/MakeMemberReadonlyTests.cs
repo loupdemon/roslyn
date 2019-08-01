@@ -2,13 +2,10 @@
 
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeFixes;
-using Microsoft.CodeAnalysis.CSharp.Diagnostics.AddBraces;
-using Microsoft.CodeAnalysis.CSharp.MakeFieldReadonly;
 using Microsoft.CodeAnalysis.CSharp.MakeMemberReadOnly;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.Diagnostics;
 using Microsoft.CodeAnalysis.Test.Utilities;
-using Roslyn.Test.Utilities;
 using Xunit;
 
 namespace Microsoft.CodeAnalysis.Editor.CSharp.UnitTests.MakeFieldReadonly

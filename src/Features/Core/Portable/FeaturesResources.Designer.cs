@@ -2436,6 +2436,15 @@ namespace Microsoft.CodeAnalysis {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Make member readonly.
+        /// </summary>
+        internal static string Make_member_readonly {
+            get {
+                return ResourceManager.GetString("Make_member_readonly", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Make method synchronous.
         /// </summary>
         internal static string Make_method_synchronous {
