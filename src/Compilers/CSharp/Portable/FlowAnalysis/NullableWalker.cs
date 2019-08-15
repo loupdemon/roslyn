@@ -3005,11 +3005,29 @@ namespace Microsoft.CodeAnalysis.CSharp
             //     location = value;
             // }
 
-            var locationSlot = MakeSlot(arguments[0]);
+            var locationArgIndex = 0;
+            var valueArgIndex = 1;
+            var comparandArgIndex = 2;
+            var argsToParamsOpt = node.ArgsToParamsOpt;
+            if (!argsToParamsOpt.IsDefault)
+            {
+                Debug.Assert(argsToParamsOpt.Length == 3);
+                for (var i = 0; i < 3; i++)
+                {
+                    switch (argsToParamsOpt[i])
+                    {
+                        case 0: locationArgIndex = i; continue;
+                        case 1: valueArgIndex = i; continue;
+                        case 2: comparandArgIndex = i; continue;
+                    }
+                }
+            }
+
+            var locationSlot = MakeSlot(arguments[locationArgIndex]);
             if (locationSlot != -1)
             {
-                var comparand = arguments[2];
-                var valueFlowState = results[1].RValueType.State;
+                var comparand = arguments[comparandArgIndex];
+                var valueFlowState = results[valueArgIndex].RValueType.State;
                 if (comparand.ConstantValue?.IsNull == true)
                 {
                     // If location contained a null, then the write `location = value` definitely occurred
@@ -3017,7 +3035,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
                 else
                 {
-                    var locationFlowState = results[0].RValueType.State;
+                    var locationFlowState = results[locationArgIndex].RValueType.State;
                     // A write may have occurred
                     State[locationSlot] = valueFlowState.Join(locationFlowState);
                 }
