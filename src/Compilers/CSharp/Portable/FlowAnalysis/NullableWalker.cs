@@ -3259,6 +3259,29 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             if (!node.HasErrors && !parameters.IsDefault)
             {
+                var effectiveArgumentsBuilder = ArrayBuilder<BoundExpression>.GetInstance(parameters.Length);
+                for (int i = 0; i < parameters.Length; i++)
+                {
+                    int argIndex = -1;
+                    for (int j = 0; j < argsToParamsOpt.Length; j++)
+                    {
+                        if (argsToParamsOpt[j] == i)
+                        {
+                            argIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (argIndex == -1)
+                    {
+                        // there must be a default value, because the call does not have errors
+                        var constantValue = parameters[i].ExplicitDefaultConstantValue;
+                        Debug.Assert(constantValue is object);
+
+                        var fictionalArgument = new BoundLiteral(node.Syntax, constantValue, );
+                    }
+                }
+
                 // Visit outbound assignments and post-conditions
                 // Note: the state may get split in this step
                 for (int i = 0; i < argumentsNoConversions.Length; i++)
