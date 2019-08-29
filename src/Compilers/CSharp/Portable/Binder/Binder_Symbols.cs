@@ -537,7 +537,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // Invalid constraint type. A type used as a constraint must be an interface, a non-sealed class or a type parameter.
                     Error(diagnostics, ErrorCode.ERR_BadConstraintType, node);
                 }
-                else if (!Flags.HasFlag(BinderFlags.SuppressConstraintChecks))
+                else if (!Flags.HasFlag(BinderFlags.SuppressConstraintChecks) && !elementType.Type.IsErrorType())
                 {
                     CheckManagedAddr(Compilation, elementType.Type, node.Location, diagnostics);
                 }

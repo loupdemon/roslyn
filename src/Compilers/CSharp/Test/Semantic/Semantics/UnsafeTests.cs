@@ -4690,25 +4690,36 @@ unsafe struct S
 }
 ";
             CreateCompilation(text, options: TestOptions.UnsafeReleaseDll).VerifyDiagnostics(
-                // (13,9): error CS0208: Cannot take the address of, get the size of, or declare a pointer to a managed type ('S')
-                //         S* p = &s; //CS0208
-                Diagnostic(ErrorCode.ERR_ManagedAddr, "S*").WithArguments("S"),
                 // (13,16): error CS0208: Cannot take the address of, get the size of, or declare a pointer to a managed type ('S')
                 //         S* p = &s; //CS0208
-                Diagnostic(ErrorCode.ERR_ManagedAddr, "&s").WithArguments("S"),
+                Diagnostic(ErrorCode.ERR_ManagedAddr, "&s").WithArguments("S").WithLocation(13, 16),
                 // (16,9): error CS0176: Member 'S.StaticFieldLikeEvent' cannot be accessed with an instance reference; qualify it with a type name instead
                 //         p->StaticFieldLikeEvent += null; //CS0176
-                Diagnostic(ErrorCode.ERR_ObjectProhibited, "p->StaticFieldLikeEvent").WithArguments("S.StaticFieldLikeEvent"),
+                Diagnostic(ErrorCode.ERR_ObjectProhibited, "p->StaticFieldLikeEvent").WithArguments("S.StaticFieldLikeEvent").WithLocation(16, 9),
                 // (19,9): error CS0176: Member 'S.StaticCustomEvent' cannot be accessed with an instance reference; qualify it with a type name instead
                 //         p->StaticCustomEvent += null; //CS0176
-                Diagnostic(ErrorCode.ERR_ObjectProhibited, "p->StaticCustomEvent").WithArguments("S.StaticCustomEvent"),
-                // (5,32): warning CS0067: The event 'S.StaticFieldLikeEvent' is never used
-                //     static event System.Action StaticFieldLikeEvent;
-                Diagnostic(ErrorCode.WRN_UnreferencedEvent, "StaticFieldLikeEvent").WithArguments("S.StaticFieldLikeEvent"),
+                Diagnostic(ErrorCode.ERR_ObjectProhibited, "p->StaticCustomEvent").WithArguments("S.StaticCustomEvent").WithLocation(19, 9),
                 // (4,25): warning CS0067: The event 'S.InstanceFieldLikeEvent' is never used
                 //     event System.Action InstanceFieldLikeEvent;
-                Diagnostic(ErrorCode.WRN_UnreferencedEvent, "InstanceFieldLikeEvent").WithArguments("S.InstanceFieldLikeEvent")
+                Diagnostic(ErrorCode.WRN_UnreferencedEvent, "InstanceFieldLikeEvent").WithArguments("S.InstanceFieldLikeEvent").WithLocation(4, 25),
+                // (5,32): warning CS0067: The event 'S.StaticFieldLikeEvent' is never used
+                //     static event System.Action StaticFieldLikeEvent;
+                Diagnostic(ErrorCode.WRN_UnreferencedEvent, "StaticFieldLikeEvent").WithArguments("S.StaticFieldLikeEvent").WithLocation(5, 32)
                 );
+        }
+
+        [Fact]
+        [WorkItem(38378, "https://github.com/dotnet/roslyn/issues/38378")]
+        public void PointerToErrorType()
+        {
+            var source = @"
+class C
+{
+    unsafe void M1(T* ptr) { } // 1
+}
+";
+            var comp = CreateCompilation(source, options: TestOptions.UnsafeReleaseDll);
+            comp.VerifyDiagnostics();
         }
 
         #endregion PointerMemberAccess diagnostics
