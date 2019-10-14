@@ -9225,7 +9225,9 @@ tryAgain:
                     break;
                 case SyntaxKind.RefKeyword:
                     // ref is not expected to appear in this position.
-                    expr = this.AddError(ParsePossibleRefExpression(), ErrorCode.ERR_InvalidExprTerm, SyntaxFacts.GetText(tk));
+                    var trivia = _syntaxFactory.SkippedTokensTrivia(new SyntaxList<SyntaxToken>(this.EatToken()));
+                    expr = AddLeadingSkippedSyntax(this.CreateMissingIdentifierName(), trivia);
+                    expr = this.AddError(expr, ErrorCode.ERR_InvalidExprTerm, SyntaxFacts.GetText(tk));
                     break;
                 default:
                     // check for intrinsic type followed by '.'
