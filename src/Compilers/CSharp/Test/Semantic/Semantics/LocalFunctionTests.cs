@@ -773,57 +773,90 @@ class C
         public void LocalFunctionExtern()
         {
             const string text = @"
+using System.Runtime.InteropServices;
+
 class C
 {
     void M()
     {
         local1(); local2(); local3(); local4(); local5(); local6(); local7(); local8(); local9(); local10(); local11(); local12();
 
-        extern void local1(); // 1
-        extern void local2() { } // 2
-        extern int local3() => 0; // 3
+        [DllImport(""a"")] extern void local1(); // 1
+        [DllImport(""a"")] extern void local2() { } // 2
+        [DllImport(""a"")] extern int local3() => 0; // 3
 
         static void local4(); // 4
         static void local5() { }
         static int local6() => 0;
 
-        static extern void local7();
-        static extern void local8() { } // 5
-        static extern int local9() => 0; // 6
+        [DllImport(""a"")] static extern void local7();
+        [DllImport(""a"")] static extern void local8() { } // 5
+        [DllImport(""a"")] static extern int local9() => 0; // 6
 
-        extern static void local10();
-        extern static void local11() { } // 7
-        extern static int local12() => 0; // 8
+        [DllImport(""a"")] extern static void local10();
+        [DllImport(""a"")] extern static void local11() { } // 7
+        [DllImport(""a"")] extern static int local12() => 0; // 8
     }
 }
 ";
-            // PROTOTYPE: extern local functions should also warn in the absence of [DllImport]
             var comp = CreateCompilation(text, parseOptions: TestOptions.RegularPreview);
             comp.VerifyDiagnostics(
-                // (8,21): error CS8112: Local function 'local1()' must either have a body or be marked 'static extern'.
-                //         extern void local1(); // 1
-                Diagnostic(ErrorCode.ERR_LocalFunctionMissingBody, "local1").WithArguments("local1()").WithLocation(8, 21),
-                // (9,21): error CS0179: 'local2()' cannot be extern and declare a body
-                //         extern void local2() { } // 2
-                Diagnostic(ErrorCode.ERR_ExternHasBody, "local2").WithArguments("local2()").WithLocation(9, 21),
-                // (10,20): error CS0179: 'local3()' cannot be extern and declare a body
-                //         extern int local3() => 0; // 3
-                Diagnostic(ErrorCode.ERR_ExternHasBody, "local3").WithArguments("local3()").WithLocation(10, 20),
-                // (12,21): error CS8112: Local function 'local4()' must either have a body or be marked 'static extern'.
+                // (10,38): error CS8112: Local function 'local1()' must either have a body or be marked 'static extern'.
+                //         [DllImport("a")] extern void local1(); // 1
+                Diagnostic(ErrorCode.ERR_LocalFunctionMissingBody, "local1").WithArguments("local1()").WithLocation(10, 38),
+                // (11,38): error CS0179: 'local2()' cannot be extern and declare a body
+                //         [DllImport("a")] extern void local2() { } // 2
+                Diagnostic(ErrorCode.ERR_ExternHasBody, "local2").WithArguments("local2()").WithLocation(11, 38),
+                // (12,37): error CS0179: 'local3()' cannot be extern and declare a body
+                //         [DllImport("a")] extern int local3() => 0; // 3
+                Diagnostic(ErrorCode.ERR_ExternHasBody, "local3").WithArguments("local3()").WithLocation(12, 37),
+                // (14,21): error CS8112: Local function 'local4()' must either have a body or be marked 'static extern'.
                 //         static void local4(); // 4
-                Diagnostic(ErrorCode.ERR_LocalFunctionMissingBody, "local4").WithArguments("local4()").WithLocation(12, 21),
-                // (17,28): error CS0179: 'local8()' cannot be extern and declare a body
-                //         static extern void local8() { } // 5
-                Diagnostic(ErrorCode.ERR_ExternHasBody, "local8").WithArguments("local8()").WithLocation(17, 28),
-                // (18,27): error CS0179: 'local9()' cannot be extern and declare a body
-                //         static extern int local9() => 0; // 6
-                Diagnostic(ErrorCode.ERR_ExternHasBody, "local9").WithArguments("local9()").WithLocation(18, 27),
-                // (21,28): error CS0179: 'local11()' cannot be extern and declare a body
-                //         static extern void local11() { } // 7
-                Diagnostic(ErrorCode.ERR_ExternHasBody, "local11").WithArguments("local11()").WithLocation(21, 28),
-                // (22,27): error CS0179: 'local12()' cannot be extern and declare a body
-                //         static extern int local12() => 0; // 8
-                Diagnostic(ErrorCode.ERR_ExternHasBody, "local12").WithArguments("local12()").WithLocation(22, 27));
+                Diagnostic(ErrorCode.ERR_LocalFunctionMissingBody, "local4").WithArguments("local4()").WithLocation(14, 21),
+                // (19,45): error CS0179: 'local8()' cannot be extern and declare a body
+                //         [DllImport("a")] static extern void local8() { } // 5
+                Diagnostic(ErrorCode.ERR_ExternHasBody, "local8").WithArguments("local8()").WithLocation(19, 45),
+                // (20,44): error CS0179: 'local9()' cannot be extern and declare a body
+                //         [DllImport("a")] static extern int local9() => 0; // 6
+                Diagnostic(ErrorCode.ERR_ExternHasBody, "local9").WithArguments("local9()").WithLocation(20, 44),
+                // (23,45): error CS0179: 'local11()' cannot be extern and declare a body
+                //         [DllImport("a")] extern static void local11() { } // 7
+                Diagnostic(ErrorCode.ERR_ExternHasBody, "local11").WithArguments("local11()").WithLocation(23, 45),
+                // (24,44): error CS0179: 'local12()' cannot be extern and declare a body
+                //         [DllImport("a")] extern static int local12() => 0; // 8
+                Diagnostic(ErrorCode.ERR_ExternHasBody, "local12").WithArguments("local12()").WithLocation(24, 44));
+        }
+
+        [Fact]
+        public void LocalFunctionExtern_NoImplementationWarning_Attribute()
+        {
+            const string text = @"
+using System.Runtime.InteropServices;
+
+class C
+{
+    void M()
+    {
+        local1();
+        local2();
+        local3();
+
+        static extern void local1(); // 1
+        static extern void local2() { } // 2
+
+        [DllImport(""a"")]
+        static extern void local3();
+    }
+}
+";
+            var comp = CreateCompilation(text, parseOptions: TestOptions.RegularPreview);
+            comp.VerifyDiagnostics(
+                // (12,28): warning CS0626: Method, operator, or accessor 'local1()' is marked external and has no attributes on it. Consider adding a DllImport attribute to specify the external implementation.
+                //         static extern void local1(); // 1
+                Diagnostic(ErrorCode.WRN_ExternMethodNoImplementation, "local1").WithArguments("local1()").WithLocation(12, 28),
+                // (13,28): error CS0179: 'local2()' cannot be extern and declare a body
+                //         static extern void local2() { } // 2
+                Diagnostic(ErrorCode.ERR_ExternHasBody, "local2").WithArguments("local2()").WithLocation(13, 28));
         }
 
         [Fact]

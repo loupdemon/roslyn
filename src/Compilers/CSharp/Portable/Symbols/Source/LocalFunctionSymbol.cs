@@ -129,6 +129,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             GetAttributes();
             GetReturnTypeAttributes();
 
+            if (IsExtern && _syntax.Body is null && _syntax.ExpressionBody is null)
+            {
+                GenerateExternalMethodWarnings(addTo);
+            }
+
             addTo.AddRange(_declarationDiagnostics);
         }
 

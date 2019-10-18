@@ -27,5 +27,17 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 diagnostics.Add(ErrorCode.ERR_UnexpectedToken, refKeyword.GetLocation(), refKeyword.ToString());
             }
         }
+
+        internal void GenerateExternalMethodWarnings(DiagnosticBag diagnostics)
+        {
+            if (this.GetAttributes().IsEmpty && !this.ContainingType.IsComImport)
+            {
+                // external method with no attributes
+                var errorCode = (this.MethodKind == MethodKind.Constructor || this.MethodKind == MethodKind.StaticConstructor) ?
+                    ErrorCode.WRN_ExternCtorNoImplementation :
+                    ErrorCode.WRN_ExternMethodNoImplementation;
+                diagnostics.Add(errorCode, this.Locations[0], this);
+            }
+        }
     }
 }
