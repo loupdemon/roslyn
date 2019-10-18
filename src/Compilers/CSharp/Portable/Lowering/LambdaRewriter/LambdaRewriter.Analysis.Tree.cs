@@ -116,7 +116,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 /// <summary>
                 /// The method symbol for the original lambda or local function.
                 /// </summary>
-                public readonly MethodSymbol OriginalMethodSymbol;
+                public readonly SourceMethodSymbol OriginalMethodSymbol;
 
                 /// <summary>
                 /// Syntax for the block of the nested function.
@@ -149,7 +149,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 public SynthesizedClosureMethod SynthesizedLoweredMethod;
 
-                public Closure(MethodSymbol symbol, SyntaxReference blockSyntax)
+                public Closure(SourceMethodSymbol symbol, SyntaxReference blockSyntax)
                 {
                     Debug.Assert(symbol != null);
                     OriginalMethodSymbol = symbol;
@@ -428,7 +428,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
 
                 public override BoundNode VisitLocalFunctionStatement(BoundLocalFunctionStatement node)
-                    => VisitClosure(node.Symbol.OriginalDefinition, node.Body);
+                    => VisitClosure((SourceMethodSymbol)node.Symbol.OriginalDefinition, node.Body);
 
                 public override BoundNode VisitCall(BoundCall node)
                 {
@@ -539,9 +539,17 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                 }
 
-                private BoundNode VisitClosure(MethodSymbol closureSymbol, BoundBlock body)
+                private BoundNode VisitClosure(SourceMethodSymbol closureSymbol, BoundBlock body)
                 {
                     Debug.Assert((object)closureSymbol != null);
+
+                    if (body is null)
+                    {
+                        // extern local function
+                        _currentScope.Closures.Add(new Closure(closureSymbol, blockSyntax: null));
+                        return null;
+                    }
+
 
                     // Closure is declared (lives) in the parent scope, but its
                     // variables are in a nested scope

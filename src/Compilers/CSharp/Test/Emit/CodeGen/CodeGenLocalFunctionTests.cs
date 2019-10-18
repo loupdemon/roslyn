@@ -5384,6 +5384,51 @@ class C
     } // end of class C");
         }
 
+        [Fact]
+        public void ExternLocalFunction()
+        {
+            var source = @"
+using System.Runtime.InteropServices;
+
+class C
+{
+    public void M()
+    {
+        local1();
+
+        [DllImport(""a"")]
+        static extern void local1();
+    }
+}
+";
+            var verifier = CompileAndVerify(
+                source,
+                options: TestOptions.DebugDll.WithMetadataImportOptions(MetadataImportOptions.All),
+                parseOptions: TestOptions.RegularPreview,
+                symbolValidator: validate);
+
+            void validate(ModuleSymbol module)
+            {
+                var cClass = module.GlobalNamespace.GetMember<NamedTypeSymbol>("C");
+                var dllAttribute = module.CorLibrary().GetTypeByMetadataName("System.Runtime.InteropServices.DllImportAttribute");
+
+                var localFn1 = cClass.GetMethod("<M>g__local1|0_0");
+                var attrs1 = localFn1.GetAttributes();
+                Assert.True(localFn1.IsExtern);
+
+                Assert.Equal(
+                    expected: new[]
+                    {
+                        module.CorLibrary().GetTypeByMetadataName("System.Runtime.CompilerServices.CompilerGeneratedAttribute"),
+                        dllAttribute
+                    },
+                    actual: attrs1.Select(a => a.AttributeClass));
+
+                var arg = attrs1[1].ConstructorArguments.Single();
+                Assert.Equal("a", arg.Value);
+            }
+        }
+
         internal CompilationVerifier VerifyOutput(string source, string output, CSharpCompilationOptions options, Verification verify = Verification.Passes)
         {
             var comp = CreateCompilationWithMscorlib45AndCSharp(source, options: options);

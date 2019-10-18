@@ -442,7 +442,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 // Move the body of the lambda to a freshly generated synthetic method on its frame.
                 topLevelMethodId = _analysis.GetTopLevelMethodId();
-                lambdaId = GetLambdaId(syntax, closureKind, closureOrdinal);
+                lambdaId = GetLambdaId(originalMethod, closureKind, closureOrdinal);
 
                 var synthesizedMethod = new SynthesizedClosureMethod(
                     translatedLambdaContainer,
@@ -1101,6 +1101,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override BoundNode VisitBlock(BoundBlock node)
         {
+            if (node is null)
+            {
+                return null;
+            }
+
             // Test if this frame has captured variables and requires the introduction of a closure class.
             if (_frames.TryGetValue(node, out var frame))
             {
@@ -1345,9 +1350,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             return new BoundNoOpStatement(node.Syntax, NoOpStatementFlavor.Default);
         }
 
-        private DebugId GetLambdaId(SyntaxNode syntax, ClosureKind closureKind, int closureOrdinal)
+        private DebugId GetLambdaId(SourceMethodSymbol originalSymbol, ClosureKind closureKind, int closureOrdinal)
         {
-            Debug.Assert(syntax != null);
+            var syntax = originalSymbol.GetNonNullSyntaxNode();
 
             SyntaxNode lambdaOrLambdaBodySyntax;
             var anonymousFunction = syntax as AnonymousFunctionExpressionSyntax;
@@ -1362,7 +1367,16 @@ namespace Microsoft.CodeAnalysis.CSharp
             else if (localFunction != null)
             {
                 lambdaOrLambdaBodySyntax = (SyntaxNode)localFunction.Body ?? localFunction.ExpressionBody?.Expression;
-                isLambdaBody = true;
+
+                if (lambdaOrLambdaBodySyntax is null)
+                {
+                    lambdaOrLambdaBodySyntax = localFunction;
+                    isLambdaBody = false;
+                }
+                else
+                {
+                    isLambdaBody = true;
+                }
             }
             else if (LambdaUtilities.IsQueryPairLambda(syntax))
             {
