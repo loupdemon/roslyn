@@ -39,5 +39,30 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 diagnostics.Add(errorCode, this.Locations[0], this);
             }
         }
+
+        /// <summary>
+        /// Symbol to copy bound attributes from, or null if the attributes are not shared among multiple source method symbols.
+        /// </summary>
+        /// <remarks>
+        /// Used for example for event accessors. The "remove" method delegates attribute binding to the "add" method. 
+        /// The bound attribute data are then applied to both accessors.
+        /// </remarks>
+        protected virtual SourceMethodSymbol BoundAttributesSource
+        {
+            get
+            {
+                return null;
+            }
+        }
+
+        internal virtual CustomAttributesBag<CSharpAttributeData> GetAttributesBag()
+        {
+            return null;
+        }
+
+        internal virtual CustomAttributesBag<CSharpAttributeData> GetReturnTypeAttributesBag()
+        {
+            return null;
+        }
     }
 }

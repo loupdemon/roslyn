@@ -5385,6 +5385,26 @@ class C
         }
 
         [Fact]
+        public void Scratch()
+        {
+            var source = @"
+using System.Runtime.InteropServices;
+
+class C
+{
+    [DllImport(""something.dll"")]
+    public static extern void M();
+}
+";
+            CompileAndVerify(source, verify: Verification.Skipped, symbolValidator: module =>
+            {
+                var type = module.GlobalNamespace.GetMember<NamedTypeSymbol>("C");
+                var method = type.GetMethod("M");
+                Assert.True(method.IsExtern);
+            });
+        }
+
+        [Fact]
         public void ExternLocalFunction()
         {
             var source = @"
@@ -5396,7 +5416,7 @@ class C
     {
         local1();
 
-        [DllImport(""a"")]
+        [DllImport(""something.dll"")]
         static extern void local1();
     }
 }
@@ -5405,7 +5425,8 @@ class C
                 source,
                 options: TestOptions.DebugDll.WithMetadataImportOptions(MetadataImportOptions.All),
                 parseOptions: TestOptions.RegularPreview,
-                symbolValidator: validate);
+                symbolValidator: validate,
+                verify: Verification.Fails);
 
             void validate(ModuleSymbol module)
             {

@@ -861,21 +861,6 @@ done:
 
         #region Attributes
 
-        /// <summary>
-        /// Symbol to copy bound attributes from, or null if the attributes are not shared among multiple source method symbols.
-        /// </summary>
-        /// <remarks>
-        /// Used for example for event accessors. The "remove" method delegates attribute binding to the "add" method. 
-        /// The bound attribute data are then applied to both accessors.
-        /// </remarks>
-        protected virtual SourceMemberMethodSymbol BoundAttributesSource
-        {
-            get
-            {
-                return null;
-            }
-        }
-
         protected virtual IAttributeTargetSymbol AttributeOwner
         {
             get { return this; }
@@ -988,7 +973,7 @@ done:
         /// <remarks>
         /// Forces binding and decoding of attributes.
         /// </remarks>
-        private CustomAttributesBag<CSharpAttributeData> GetAttributesBag()
+        internal override CustomAttributesBag<CSharpAttributeData> GetAttributesBag()
         {
             var bag = _lazyCustomAttributesBag;
             if (bag != null && bag.IsSealed)
@@ -1005,7 +990,7 @@ done:
         /// <remarks>
         /// Forces binding and decoding of attributes.
         /// </remarks>
-        private CustomAttributesBag<CSharpAttributeData> GetReturnTypeAttributesBag()
+        internal override CustomAttributesBag<CSharpAttributeData> GetReturnTypeAttributesBag()
         {
             var bag = _lazyReturnTypeCustomAttributesBag;
             if (bag != null && bag.IsSealed)
@@ -1018,7 +1003,7 @@ done:
 
         private CustomAttributesBag<CSharpAttributeData> GetAttributesBag(ref CustomAttributesBag<CSharpAttributeData> lazyCustomAttributesBag, bool forReturnType)
         {
-            SourceMemberMethodSymbol copyFrom = this.BoundAttributesSource;
+            var copyFrom = this.BoundAttributesSource;
 
             // prevent infinite recursion:
             Debug.Assert(!ReferenceEquals(copyFrom, this));
@@ -1666,7 +1651,7 @@ done:
             return SpecializedCollections.EmptyEnumerable<Cci.SecurityAttribute>();
         }
 
-        public sealed override DllImportData GetDllImportData()
+        public override DllImportData GetDllImportData()
         {
             var data = this.GetDecodedWellKnownAttributeData();
             return data != null ? data.DllImportPlatformInvokeData : null;

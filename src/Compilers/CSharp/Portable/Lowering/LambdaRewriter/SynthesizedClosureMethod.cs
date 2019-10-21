@@ -117,6 +117,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 mods |= DeclarationModifiers.Async;
             }
 
+            if (originalMethod.IsExtern)
+            {
+                mods |= DeclarationModifiers.Extern;
+            }
+
             return mods;
         }
 
@@ -165,9 +170,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal override bool IsExpressionBodied => false;
         internal MethodSymbol TopLevelMethod => _topLevelMethod;
 
-        public override ImmutableArray<CSharpAttributeData> GetAttributes() => _originalMethod.GetAttributes();
+        protected override SourceMethodSymbol BoundAttributesSource => _originalMethod as LocalFunctionSymbol; // only local functions provide bound attributes.
 
-        public override ImmutableArray<CSharpAttributeData> GetReturnTypeAttributes() => _originalMethod.GetReturnTypeAttributes();
+        public override DllImportData GetDllImportData() => _originalMethod.GetDllImportData();
 
         internal override int CalculateLocalSyntaxOffset(int localPosition, SyntaxTree localTree)
         {

@@ -394,7 +394,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         AttributeLocation IAttributeTargetSymbol.DefaultAttributeLocation => AttributeLocation.Method;
 
-        public override DllImportData? GetDllImportData() => null;
+        public override DllImportData? GetDllImportData() => ((MethodWellKnownAttributeData?)GetAttributesBag().DecodedWellKnownAttributeData)?.DllImportPlatformInvokeData;
 
         internal override ImmutableArray<string> GetAppliedConditionalSymbols() => ImmutableArray<string>.Empty;
 
@@ -515,7 +515,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return _lazyTypeParameterConstraints;
         }
 
-        public override ImmutableArray<CSharpAttributeData> GetAttributes()
+        internal override CustomAttributesBag<CSharpAttributeData> GetAttributesBag()
         {
             var lazyCustomAttributesBag = _lazyCustomAttributesBag;
             if (lazyCustomAttributesBag == null)
@@ -524,10 +524,15 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 lazyCustomAttributesBag = _lazyCustomAttributesBag;
             }
 
-            return lazyCustomAttributesBag.Attributes;
+            return lazyCustomAttributesBag;
         }
 
-        public override ImmutableArray<CSharpAttributeData> GetReturnTypeAttributes()
+        public override ImmutableArray<CSharpAttributeData> GetAttributes()
+        {
+            return GetAttributesBag().Attributes;
+        }
+
+        internal override CustomAttributesBag<CSharpAttributeData> GetReturnTypeAttributesBag()
         {
             var lazyReturnTypeCustomAttributesBag = _lazyReturnTypeCustomAttributesBag;
             if (lazyReturnTypeCustomAttributesBag == null)
@@ -539,7 +544,12 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 lazyReturnTypeCustomAttributesBag = _lazyReturnTypeCustomAttributesBag;
             }
 
-            return lazyReturnTypeCustomAttributesBag.Attributes;
+            return lazyReturnTypeCustomAttributesBag;
+        }
+
+        public override ImmutableArray<CSharpAttributeData> GetReturnTypeAttributes()
+        {
+            return GetReturnTypeAttributesBag().Attributes;
         }
 
         public override int GetHashCode()
