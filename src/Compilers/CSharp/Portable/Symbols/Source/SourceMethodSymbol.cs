@@ -227,8 +227,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         private void ValidateConditionalAttribute(CSharpAttributeData attribute, AttributeSyntax node, DiagnosticBag diagnostics)
         {
-            Debug.Assert(this.IsConditional);
-
             if (this.IsAccessor())
             {
                 // CS1667: Attribute '{0}' is not valid on property or event accessors. It is only valid on '{1}' declarations.

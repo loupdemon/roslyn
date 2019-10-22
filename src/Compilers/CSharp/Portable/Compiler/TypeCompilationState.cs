@@ -26,12 +26,13 @@ namespace Microsoft.CodeAnalysis.CSharp
         internal struct MethodWithBody
         {
             public readonly MethodSymbol Method;
-            public readonly BoundStatement? Body { get; }
+            public readonly BoundStatement Body;
             public readonly ImportChain? ImportChainOpt;
 
-            internal MethodWithBody(MethodSymbol method, BoundStatement? body, ImportChain? importChainOpt)
+            internal MethodWithBody(MethodSymbol method, BoundStatement body, ImportChain? importChainOpt)
             {
                 RoslynDebug.Assert(method != null);
+                RoslynDebug.Assert(body != null);
 
                 this.Method = method;
                 this.Body = body;

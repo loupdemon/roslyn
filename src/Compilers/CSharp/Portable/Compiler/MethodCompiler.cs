@@ -687,11 +687,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             {
                 foreach (var methodWithBody in synthesizedMethods)
                 {
-                    if (methodWithBody.Body is null)
-                    {
-                        continue;
-                    }
-
                     var importChain = methodWithBody.ImportChainOpt;
                     compilationState.CurrentImportChain = importChain;
 

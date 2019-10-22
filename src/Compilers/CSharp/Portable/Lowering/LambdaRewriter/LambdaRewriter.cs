@@ -1504,6 +1504,11 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private void AddSynthesizedMethod(MethodSymbol method, BoundStatement body)
         {
+            if (body == null)
+            {
+                return;
+            }
+
             if (_synthesizedMethods == null)
             {
                 _synthesizedMethods = ArrayBuilder<TypeCompilationState.MethodWithBody>.GetInstance();
