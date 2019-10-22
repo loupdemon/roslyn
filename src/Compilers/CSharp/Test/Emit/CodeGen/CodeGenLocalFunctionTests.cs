@@ -5426,7 +5426,7 @@ class C
                 options: TestOptions.DebugDll.WithMetadataImportOptions(MetadataImportOptions.All),
                 parseOptions: TestOptions.RegularPreview,
                 symbolValidator: validate,
-                verify: Verification.Fails);
+                verify: Verification.Skipped);
 
             void validate(ModuleSymbol module)
             {
@@ -5434,19 +5434,14 @@ class C
                 var dllAttribute = module.CorLibrary().GetTypeByMetadataName("System.Runtime.InteropServices.DllImportAttribute");
 
                 var localFn1 = cClass.GetMethod("<M>g__local1|0_0");
-                var attrs1 = localFn1.GetAttributes();
                 Assert.True(localFn1.IsExtern);
 
-                Assert.Equal(
-                    expected: new[]
-                    {
-                        module.CorLibrary().GetTypeByMetadataName("System.Runtime.CompilerServices.CompilerGeneratedAttribute"),
-                        dllAttribute
-                    },
-                    actual: attrs1.Select(a => a.AttributeClass));
+                var importData = localFn1.GetDllImportData();
+                Assert.Equal("something.dll", importData.ModuleName);
 
-                var arg = attrs1[1].ConstructorArguments.Single();
-                Assert.Equal("a", arg.Value);
+                Assert.Empty(localFn1.GetReturnTypeAttributes());
+                var attr = localFn1.GetAttributes().Single();
+                Assert.Equal(module.CorLibrary().GetTypeByMetadataName("System.Runtime.CompilerServices.CompilerGeneratedAttribute"), attr.AttributeClass);
             }
         }
 
