@@ -86,3 +86,5 @@ could be different than the one that compiler used to find.
         extern event System.Action E = null; // error
     }
     ```
+
+13. We're doing only good things, not bad things.
