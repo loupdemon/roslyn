@@ -3043,7 +3043,91 @@ hello
   IL_0020:  call       ""void System.Console.WriteLine(string)""
   IL_0025:  ret
 }");
+        }
 
+        [Fact, WorkItem(40690, "https://github.com/dotnet/roslyn/issues/40690")]
+        public void ConditionalAccess_GenericExtension_ValueTuple()
+        {
+            var source = @"
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace bug
+{
+    public static class Extension
+    {
+        public static String GetValue(this object value) => value?.ToString();
+    }
+
+    public partial class BGen<__T__>
+    {
+        public (Int64, __T__) Data { get; }
+
+        public BGen((Int64, __T__) data)
+        {
+            this.Data = data;
+        }
+
+        internal String Value
+        {
+            get
+            {
+                /// This works fine:
+                //var i2 = Data.Item2;
+                //var q2 = i2?.GetValue();
+
+                // This causes the AccessViolation:
+                var q2 = Data.Item2?.GetValue();
+                return q2;
+            }
+        }
+    }
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            var i = new BGen<string>((0, ""foo""));
+            var r = i.Value;
+
+            Console.WriteLine($""Hello World: {{string.Join(',', r)}}"");
+        }
+    }
+}
+";
+            var verifier = CompileAndVerify(source, verify: Verification.Skipped); // TODO: remove verify argument after fixing bug
+            verifier.VerifyIL("bug.BGen<__T__>.Value.get", @"
+{
+    // Code size       65 (0x41)
+    .maxstack  2
+    .locals init (System.ValueTuple<long, __T__> V_0,
+                __T__ V_1)
+    IL_0000:  ldarg.0
+    IL_0001:  call       ""(long, __T__) bug.BGen<__T__>.Data.get""
+    IL_0006:  stloc.0
+    IL_0007:  ldloca.s   V_0
+    IL_0009:  ldflda     ""__T__ System.ValueTuple<long, __T__>.Item2""
+    IL_000e:  ldloca.s   V_1
+    IL_0010:  initobj    ""__T__""
+    IL_0016:  ldloc.1
+    IL_0017:  box        ""__T__""
+    IL_001c:  brtrue.s   IL_0031
+    IL_001e:  ldobj      ""__T__""
+    IL_0023:  stloc.1
+    IL_0024:  ldloca.s   V_1
+    IL_0026:  ldloc.1
+    IL_0027:  box        ""__T__""
+    IL_002c:  brtrue.s   IL_0031
+    IL_002e:  pop
+    IL_002f:  ldnull
+    IL_0030:  ret
+    IL_0031:  ldobj      ""__T__""
+    IL_0036:  box        ""__T__""
+    IL_003b:  call       ""string bug.Extension.GetValue(object)""
+    IL_0040:  ret
+}");
         }
     }
 }
