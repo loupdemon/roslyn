@@ -3100,33 +3100,24 @@ namespace bug
             var verifier = CompileAndVerify(source, verify: Verification.Skipped); // TODO: remove verify argument after fixing bug
             verifier.VerifyIL("bug.BGen<__T__>.Value.get", @"
 {
-    // Code size       65 (0x41)
+    // Code size       41 (0x29)
     .maxstack  2
-    .locals init (System.ValueTuple<long, __T__> V_0,
-                __T__ V_1)
+    .locals init (System.ValueTuple<long, __T__> V_0)
     IL_0000:  ldarg.0
-    IL_0001:  call       ""(long, __T__) bug.BGen<__T__>.Data.get""
+    IL_0001:  call       ""System.ValueTuple<long, __T__> bug.BGen<__T__>.Data.get""
     IL_0006:  stloc.0
     IL_0007:  ldloca.s   V_0
     IL_0009:  ldflda     ""__T__ System.ValueTuple<long, __T__>.Item2""
-    IL_000e:  ldloca.s   V_1
-    IL_0010:  initobj    ""__T__""
-    IL_0016:  ldloc.1
-    IL_0017:  box        ""__T__""
-    IL_001c:  brtrue.s   IL_0031
-    IL_001e:  ldobj      ""__T__""
-    IL_0023:  stloc.1
-    IL_0024:  ldloca.s   V_1
-    IL_0026:  ldloc.1
-    IL_0027:  box        ""__T__""
-    IL_002c:  brtrue.s   IL_0031
-    IL_002e:  pop
-    IL_002f:  ldnull
-    IL_0030:  ret
-    IL_0031:  ldobj      ""__T__""
-    IL_0036:  box        ""__T__""
-    IL_003b:  call       ""string bug.Extension.GetValue(object)""
-    IL_0040:  ret
+    IL_000e:  ldloc.0
+    IL_000f:  box        ""__T__""
+    IL_0014:  brtrue.s   IL_0019
+    IL_0016:  pop
+    IL_0017:  ldnull
+    IL_0018:  ret
+    IL_0019:  ldobj      ""__T__""
+    IL_001e:  box        ""__T__""
+    IL_0023:  call       ""string bug.Extension.GetValue(object)""
+    IL_0028:  ret
 }");
         }
     }
