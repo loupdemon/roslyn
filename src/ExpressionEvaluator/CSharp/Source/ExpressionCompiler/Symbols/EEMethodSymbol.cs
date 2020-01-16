@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeGen;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.ExpressionEvaluator;
@@ -91,7 +92,7 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             var allSourceTypeParameters = container.SourceTypeParameters.Concat(sourceMethodTypeParameters);
 
             var getTypeMap = new Func<TypeMap>(() => this.TypeMap);
-            _typeParameters = sourceMethodTypeParameters.SelectAsArray(
+            _typeParameters = sourceMethodTypeParameters.SelectAsArray<TypeParameterSymbol, object, TypeParameterSymbol>(
                 (tp, i, arg) => (TypeParameterSymbol)new EETypeParameterSymbol(this, tp, i, getTypeMap),
                 (object)null);
             _allTypeParameters = container.TypeParameters.Concat(_typeParameters);
@@ -175,6 +176,20 @@ namespace Microsoft.CodeAnalysis.CSharp.ExpressionEvaluator
             localsMap.Free();
 
             _generateMethodBody = generateMethodBody;
+        }
+
+        private sealed class EESynthesizedParameterSymbol : SynthesizedParameterSymbolBase
+        {
+            public EESynthesizedParameterSymbol(
+                MethodSymbol containingMethod,
+                int ordinal,
+                string name,
+                ParameterSymbol sourceParameter)
+                : base(containingMethod, sourceParameter.TypeWithAnnotations, ordinal, sourceParameter.RefKind, name)
+            {
+            }
+
+            public override ImmutableArray<CustomModifier> RefCustomModifiers => throw new NotImplementedException();
         }
 
         private ParameterSymbol MakeParameterSymbol(int ordinal, string name, ParameterSymbol sourceParameter)

@@ -150,6 +150,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             get { return _originalParam.IsCallerMemberName; }
         }
 
+        internal override bool HasEnumeratorCancellationAttribute
+        {
+            get { return _originalParam.HasEnumeratorCancellationAttribute; }
+        }
+
         internal override FlowAnalysisAnnotations FlowAnalysisAnnotations
         {
             get { return FlowAnalysisAnnotations.None; }

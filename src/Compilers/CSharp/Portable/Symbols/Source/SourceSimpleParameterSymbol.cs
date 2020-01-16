@@ -46,6 +46,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             get { return false; }
         }
 
+        internal override bool HasEnumeratorCancellationAttribute
+        {
+            get { return false; }
+        }
+
         public override ImmutableArray<CustomModifier> RefCustomModifiers
         {
             get { return ImmutableArray<CustomModifier>.Empty; }

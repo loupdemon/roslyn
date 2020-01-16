@@ -463,31 +463,19 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             {
             }
 
-            public override bool Equals(Symbol obj, TypeCompareKind compareKind)
-            {
-                if (obj == (object)this)
-                {
-                    return true;
-                }
-
-                var other = obj as SynthesizedOperatorParameterSymbol;
-
-                if ((object)other == null)
-                {
-                    return false;
-                }
-
-                return Ordinal == other.Ordinal && ContainingSymbol.Equals(other.ContainingSymbol, compareKind);
-            }
-
-            public override int GetHashCode()
-            {
-                return Hash.Combine(ContainingSymbol, Ordinal.GetHashCode());
-            }
-
             public override ImmutableArray<CustomModifier> RefCustomModifiers
             {
                 get { return ImmutableArray<CustomModifier>.Empty; }
+            }
+
+            internal override bool HasEnumeratorCancellationAttribute
+            {
+                get { return false; }
+            }
+
+            internal override ConstantValue DefaultValueFromAttributes
+            {
+                get { return null; }
             }
         }
     }

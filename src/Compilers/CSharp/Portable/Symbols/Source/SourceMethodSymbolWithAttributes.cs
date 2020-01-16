@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -831,6 +832,35 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
 
             base.PostDecodeWellKnownAttributes(boundAttributes, allAttributeSyntaxNodes, diagnostics, symbolPart, decodedData);
+        }
+
+        // Called after all method attributes, return attributes, and parameter attributes have been initialized on this method.
+        protected void PostDecodeAllMethodAttributes(DiagnosticBag diagnostics)
+        {
+            var location = this.Locations[0];
+            if (IsAsync)
+            {
+                var cancellationTokenType = DeclaringCompilation.GetWellKnownType(WellKnownType.System_Threading_CancellationToken);
+                var iAsyncEnumerableType = DeclaringCompilation.GetWellKnownType(WellKnownType.System_Collections_Generic_IAsyncEnumerable_T);
+                var enumeratorCancellationCount = Parameters.Count(p => p is SourceParameterSymbolBase { HasEnumeratorCancellationAttribute: true });
+                if (ReturnType.OriginalDefinition.Equals(iAsyncEnumerableType) &&
+                    GetInMethodSyntaxNode() is object)
+                {
+                    if (enumeratorCancellationCount == 0 &&
+                        ParameterTypesWithAnnotations.Any(p => p.Type.Equals(cancellationTokenType)))
+                    {
+                        // Warn for CancellationToken parameters in async-iterators with no parameter decorated with [EnumeratorCancellation]
+                        // There could be more than one parameter that could be decorated with [EnumeratorCancellation] so we warn on the method instead
+                        diagnostics.Add(ErrorCode.WRN_UndecoratedCancellationTokenParameter, location, this);
+                    }
+
+                    if (enumeratorCancellationCount > 1)
+                    {
+                        // The [EnumeratorCancellation] attribute can only be used on one parameter
+                        diagnostics.Add(ErrorCode.ERR_MultipleEnumeratorCancellationAttributes, location);
+                    }
+                }
+            }
         }
 
         private static FlowAnalysisAnnotations DecodeReturnTypeAnnotationAttributes(ReturnTypeWellKnownAttributeData attributeData)

@@ -1,21 +1,21 @@
 ﻿// Copyright (c) Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information.
 
+#nullable enable
+
 using System;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using Microsoft.CodeAnalysis.CSharp.Emit;
 using Microsoft.CodeAnalysis.PooledObjects;
+using Roslyn.Utilities;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols
 {
     /// <summary>
     /// Represents a simple compiler generated parameter of a given type.
     /// </summary>
-    internal abstract class SynthesizedParameterSymbolBase : ParameterSymbol
+    internal abstract class SynthesizedParameterSymbolBase : SourceParameterSymbolBase
     {
-        private readonly MethodSymbol _container;
         private readonly TypeWithAnnotations _type;
-        private readonly int _ordinal;
         private readonly string _name;
         private readonly RefKind _refKind;
 
@@ -25,14 +25,13 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             int ordinal,
             RefKind refKind,
             string name = "")
+            : base(container, ordinal)
         {
-            Debug.Assert(type.HasType);
-            Debug.Assert(name != null);
-            Debug.Assert(ordinal >= 0);
+            RoslynDebug.Assert(type.HasType);
+            RoslynDebug.Assert(name != null);
+            RoslynDebug.Assert(ordinal >= 0);
 
-            _container = container;
             _type = type;
-            _ordinal = ordinal;
             _refKind = refKind;
             _name = name;
         }
@@ -47,7 +46,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
 
         internal override bool IsMetadataOut => RefKind == RefKind.Out;
 
-        internal override MarshalPseudoCustomAttributeData MarshallingInformation
+        internal override MarshalPseudoCustomAttributeData? MarshallingInformation
         {
             get { return null; }
         }
@@ -58,11 +57,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         }
 
         public abstract override ImmutableArray<CustomModifier> RefCustomModifiers { get; }
-
-        public override int Ordinal
-        {
-            get { return _ordinal; }
-        }
 
         public override bool IsParams
         {
@@ -79,7 +73,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             get { return true; }
         }
 
-        internal override ConstantValue ExplicitDefaultConstantValue
+        internal override ConstantValue? ExplicitDefaultConstantValue
         {
             get { return null; }
         }
@@ -119,11 +113,6 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             get { return ImmutableHashSet<string>.Empty; }
         }
 
-        public override Symbol ContainingSymbol
-        {
-            get { return _container; }
-        }
-
         public override ImmutableArray<Location> Locations
         {
             get { return ImmutableArray<Location>.Empty; }
@@ -135,6 +124,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             {
                 return ImmutableArray<SyntaxReference>.Empty;
             }
+        }
+
+        internal override ParameterSymbol WithCustomModifiersAndParams(TypeSymbol newType, ImmutableArray<CustomModifier> newCustomModifiers, ImmutableArray<CustomModifier> newRefCustomModifiers, bool newIsParams)
+        {
+            throw ExceptionUtilities.Unreachable;
         }
 
         internal override void AddSynthesizedAttributes(PEModuleBuilder moduleBuilder, ref ArrayBuilder<SynthesizedAttributeData> attributes)
@@ -192,7 +186,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             return new SynthesizedParameterSymbol(container, type, ordinal, refKind, name);
         }
 
-        public static ParameterSymbol Create(MethodSymbol container, TypeWithAnnotations type, ParameterSymbol baseParameter, bool inheritAttributes)
+        public static ParameterSymbol Create(MethodSymbol container, TypeWithAnnotations type, SourceParameterSymbolBase baseParameter, bool inheritAttributes)
 
         {
             return new SynthesizedComplexParameterSymbol(container, type, baseParameter, inheritAttributes);
@@ -214,10 +208,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 //same properties as the old one, just change the owner
                 builder.Add(
                     Create(
-                        destinationMethod,
-                        oldParam.TypeWithAnnotations,
-                        oldParam,
-                        inheritAttributes: false));
+                        destinationMethod, oldParam.TypeWithAnnotations, oldParam.Ordinal, oldParam.RefKind, oldParam.Name));
             }
 
             return builder.ToImmutableAndFree();
@@ -228,16 +219,27 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             get { return ImmutableArray<CustomModifier>.Empty; }
         }
 
+        internal override bool HasEnumeratorCancellationAttribute
+        {
+            get { return false; }
+        }
+
+        internal override ParameterSymbol WithCustomModifiersAndParams(TypeSymbol newType, ImmutableArray<CustomModifier> newCustomModifiers, ImmutableArray<CustomModifier> newRefCustomModifiers, bool newIsParams)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal override ConstantValue DefaultValueFromAttributes => throw new NotImplementedException();
+
         private sealed class SynthesizedComplexParameterSymbol : SynthesizedParameterSymbolBase
         {
-            private readonly ParameterSymbol _baseParameter;
+            private readonly SourceParameterSymbolBase _baseParameter;
             private readonly bool _inheritAttributes;
-
 
             public SynthesizedComplexParameterSymbol(
                 MethodSymbol container,
                 TypeWithAnnotations type,
-                ParameterSymbol baseParameter,
+                SourceParameterSymbolBase baseParameter,
                 bool inheritAttributes)
                 : base(container,
                       type,
@@ -260,9 +262,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 return _inheritAttributes ? _baseParameter.GetAttributes() : ImmutableArray<CSharpAttributeData>.Empty;
             }
 
-            internal override bool HasEnumeratorCancellationAttribute => _inheritAttributes ? _baseParameter.HasEnumeratorCancellationAttribute : false;
+            internal override ConstantValue? DefaultValueFromAttributes => _inheritAttributes ? _baseParameter.DefaultValueFromAttributes : null;
 
-            // PROTOTYPE: add overrides for other well-known parameter attributes used after lowering
+            internal override bool HasEnumeratorCancellationAttribute => _inheritAttributes && _baseParameter.HasEnumeratorCancellationAttribute;
+
+            // PROTOTYPE(local-function-attributes): add overrides for other well-known parameter attributes used after lowering
         }
     }
 }

@@ -121,7 +121,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 builder.Add(SynthesizedParameterSymbol.Create(
                     this,
                     TypeMap.SubstituteType(p.OriginalDefinition.TypeWithAnnotations),
-                    p,
+                    (SourceParameterSymbolBase)p,
                     inheritAttributes));
             }
             int ordinal = parameters.Length;
