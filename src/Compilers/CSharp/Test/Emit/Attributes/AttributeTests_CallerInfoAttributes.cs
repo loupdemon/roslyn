@@ -1096,7 +1096,7 @@ name: LocalFunctionCaller
         }
 
         [Fact]
-        public void TestCallerMemberName_LocalFunctionAttribute()
+        public void TestCallerMemberName_LocalFunctionAttribute_01()
         {
             string source = @"
 using System.Runtime.CompilerServices;
@@ -1113,6 +1113,53 @@ class D
         }
 
         log();
+    }
+}
+
+class Test
+{
+
+    public static void Main()
+    {
+        var d = new D();
+        d.LocalFunctionCaller();
+    }
+}";
+
+            var expected = @"
+name: LocalFunctionCaller
+";
+
+            var compilation = CreateCompilationWithMscorlib45(
+                source,
+                references: new MetadataReference[] { SystemRef },
+                options: TestOptions.ReleaseExe,
+                parseOptions: TestOptions.RegularPreview);
+            CompileAndVerify(compilation, expectedOutput: expected);
+        }
+
+        [Fact]
+        public void TestCallerMemberName_LocalFunctionAttribute_02()
+        {
+            string source = @"
+using System.Runtime.CompilerServices;
+using System;
+
+class D
+{
+    public void LocalFunctionCaller()
+    {
+        static void local1()
+        {
+            static void log([CallerMemberName] string callerName = """")
+            {
+                Console.WriteLine(""name: "" + callerName);
+            }
+
+            log();
+        }
+
+        local1();
     }
 }
 
