@@ -6286,49 +6286,43 @@ done:;
         /// <returns><c>null</c> when a statement cannot be parsed at this location.</returns>
         private StatementSyntax TryParseStatementCore()
         {
-            var resetPointBeforeStatement = this.GetResetPoint();
-            try
+            _recursionDepth++;
+            StackGuard.EnsureSufficientExecutionStack(_recursionDepth);
+
+            if (this.IsIncrementalAndFactoryContextMatches && this.CurrentNode is CSharp.Syntax.StatementSyntax)
             {
-                _recursionDepth++;
-                StackGuard.EnsureSufficientExecutionStack(_recursionDepth);
-
-                if (this.IsIncrementalAndFactoryContextMatches && this.CurrentNode is CSharp.Syntax.StatementSyntax)
-                {
-                    return (StatementSyntax)this.EatNode();
-                }
-
-                // All statements allow attributes in the syntax model (though not all support them in terms of the langauge).
-                // Start by parsing out the optional attributes that can proceed everything. Then determine how to
-                // parse the actual construct that follows.
-                var attributes = this.ParseAttributeDeclarations();
-
-                // FIXME
-                StatementSyntax result = TryParseStatementNoDeclaration(allowAnyExpression: false);
-                if (result != null)
-                {
-                    return result;
-                }
-
-                // We could not successfully parse the statement as a non-declaration. Try to parse
-                // it as either a declaration or as an "await X();" statement that is in a non-async
-                // method. 
-
-                result = TryParsePossibleDeclarationOrBadAwaitStatement(attributes);
-                if (result != null)
-                {
-                    return result;
-                }
-
-                // We didn't successfully parse anything.  If we parsed any attributes, we have to rewind
-                // to before them so that they don't get lost.
-                this.Reset(ref resetPointBeforeStatement);
-                return null;
+                return (StatementSyntax)this.EatNode();
             }
-            finally
+
+            StatementSyntax result = TryParseStatementNoDeclaration(allowAnyExpression: false);
+            if (result != null)
             {
-                _recursionDepth--;
-                this.Release(ref resetPointBeforeStatement);
+                return result;
             }
+
+            // We could not successfully parse the statement as a non-declaration. Try to parse
+            // it as either a declaration or as an "await X();" statement that is in a non-async
+            // method. 
+
+            result = TryParsePossibleDeclarationOrBadAwaitStatement(attributes: default);
+            if (result != null)
+            {
+                return result;
+            }
+
+            return AttachAttributesToMissingEmptyStatement();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private StatementSyntax AttachAttributesToMissingEmptyStatement()
+        {
+            var attributes = ParseAttributeDeclarations();
+            if (attributes != default)
+            {
+                return _syntaxFactory.EmptyStatement(attributes, SyntaxToken.CreateMissing(SyntaxKind.SemicolonToken, leading: null, trailing: null));
+            }
+
+            return null;
         }
 
         /// <returns><c>null</c> when a statement cannot be parsed at this location.</returns>
