@@ -743,6 +743,124 @@ class C
 
         [WorkItem(42985, "https://github.com/dotnet/roslyn/issues/42985")]
         [Fact]
+        public void SkipSynthesizedStaticConstructor_09()
+        {
+            string source = @"
+#nullable enable
+
+struct S
+{
+    public int x;
+}
+
+class C
+{
+    static S? s1 = null;
+}";
+            CompileAndVerify(source).VerifyMemberInIL("C..cctor()", false);
+        }
+
+        [WorkItem(42985, "https://github.com/dotnet/roslyn/issues/42985")]
+        [Fact]
+        public void SkipSynthesizedStaticConstructor_10()
+        {
+            string source = @"
+#nullable enable
+
+struct S
+{
+    public int x;
+}
+
+class C
+{
+    static S? s1 = default;
+    static S? s2 = default(S?);
+}";
+            CompileAndVerify(source).VerifyMemberInIL("C..cctor()", false);
+        }
+
+        [WorkItem(42985, "https://github.com/dotnet/roslyn/issues/42985")]
+        [Fact]
+        public void SkipSynthesizedStaticConstructor_11()
+        {
+            string source = @"
+#nullable enable
+
+struct S
+{
+    public int x;
+}
+
+class C
+{
+    static S? s1 = default(S);
+}";
+            CompileAndVerify(source).VerifyIL("C..cctor()", @"
+{
+  // Code size       20 (0x14)
+  .maxstack  1
+  .locals init (S V_0)
+  IL_0000:  ldloca.s   V_0
+  IL_0002:  initobj    ""S""
+  IL_0008:  ldloc.0
+  IL_0009:  newobj     ""S?..ctor(S)""
+  IL_000e:  stsfld     ""S? C.s1""
+  IL_0013:  ret
+}");
+        }
+
+        [WorkItem(42985, "https://github.com/dotnet/roslyn/issues/42985")]
+        [Fact]
+        public void SkipSynthesizedStaticConstructor_12()
+        {
+            string source = @"
+#nullable enable
+
+struct S
+{
+    public int x;
+}
+
+class C
+{
+    static object s1 = default(S);
+}";
+            CompileAndVerify(source).VerifyIL("C..cctor()", @"
+{
+  // Code size       20 (0x14)
+  .maxstack  1
+  .locals init (S V_0)
+  IL_0000:  ldloca.s   V_0
+  IL_0002:  initobj    ""S""
+  IL_0008:  ldloc.0
+  IL_0009:  box        ""S""
+  IL_000e:  stsfld     ""object C.s1""
+  IL_0013:  ret
+}");
+        }
+
+        [WorkItem(42985, "https://github.com/dotnet/roslyn/issues/42985")]
+        [Fact]
+        public void SkipSynthesizedStaticConstructor_13()
+        {
+            string source = @"
+#nullable enable
+
+struct S
+{
+    public int x;
+}
+
+class C
+{
+    static object s1 = default(S?);
+}";
+            CompileAndVerify(source).VerifyMemberInIL("C..cctor()", false);
+        }
+
+        [WorkItem(42985, "https://github.com/dotnet/roslyn/issues/42985")]
+        [Fact]
         public void ExplicitStaticConstructor_01()
         {
             string source = @"
