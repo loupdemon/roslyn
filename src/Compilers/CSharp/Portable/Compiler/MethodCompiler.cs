@@ -1207,7 +1207,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                                 // Only do the cast if we haven't returned with some error diagnostics.
                                 // Otherwise, `lowered` might have been a BoundBadStatement.
                                 var loweredList = (BoundStatementList)lowered;
-                                if (methodSymbol is SynthesizedStaticConstructor && loweredList.Statements.IsEmpty)
+                                if (methodSymbol.IsImplicitStaticConstructor && loweredList.Statements.IsEmpty)
                                 {
                                     // either there were no initializers or they were all optimized out.
                                     return;

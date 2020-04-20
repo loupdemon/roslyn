@@ -859,6 +859,51 @@ class C
             CompileAndVerify(source).VerifyMemberInIL("C..cctor()", false);
         }
 
+        [WorkItem(543606, "http://vstfdevdiv:8080/DevDiv2/DevDiv/_workitems/edit/543606")]
+        [ConditionalFact(typeof(DesktopOnly))]
+        public void StaticNullInitializerHasNoEffectOnTypeIL()
+        {
+            var source1 = @"
+#nullable enable
+class C
+{
+    static string s1;
+}";
+
+            var source2 = @"
+#nullable enable
+class C
+{
+    static string s1 = null!;
+}";
+
+            var expectedIL = @"
+.class private auto ansi beforefieldinit C
+        extends [mscorlib]System.Object
+{
+        // Fields
+        .field private static string s1
+        .custom instance void System.Runtime.CompilerServices.NullableAttribute::.ctor(uint8) = (
+                01 00 01 00 00
+        )
+        // Methods
+        .method public hidebysig specialname rtspecialname
+                instance void .ctor () cil managed
+        {
+                // Method begins at RVA 0x207f
+                // Code size 7 (0x7)
+                .maxstack 8
+                IL_0000: ldarg.0
+                IL_0001: call instance void [mscorlib]System.Object::.ctor()
+                IL_0006: ret
+        } // end of method C::.ctor
+} // end of class C
+";
+
+            CompileAndVerify(source1).VerifyTypeIL("C", expectedIL);
+            CompileAndVerify(source2).VerifyTypeIL("C", expectedIL);
+        }
+
         [WorkItem(42985, "https://github.com/dotnet/roslyn/issues/42985")]
         [Fact]
         public void ExplicitStaticConstructor_01()
