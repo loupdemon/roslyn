@@ -18,6 +18,16 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         public LocalFunctionParsingTests(ITestOutputHelper output) : base(output) { }
 
         [Fact]
+        public void RefErrorPropertyCrash()
+        {
+            CompileAndVerify(@"
+public class C {
+    public ref ERROR Prop => throw null!;
+}
+").VerifyDiagnostics();
+        }
+
+        [Fact]
         [WorkItem(13480, "https://github.com/dotnet/roslyn/issues/13480")]
         public void IncompleteLocalFunc()
         {

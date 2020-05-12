@@ -879,50 +879,86 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
 
         public override ImmutableArray<SyntaxReference> DeclaringSyntaxReferences => ImmutableArray<SyntaxReference>.Empty;
 
+#nullable enable
         public override ImmutableArray<CSharpAttributeData> GetAttributes()
         {
             if (!_packedFlags.IsCustomAttributesPopulated)
             {
                 // Compute the value
-                var attributeData = default(ImmutableArray<CSharpAttributeData>);
+                return initializeCustomAttributes();
+            }
+
+            // Retrieve cached or inferred value.
+            var uncommonFields = _uncommonFields;
+            if (uncommonFields == null)
+            {
+                return ImmutableArray<CSharpAttributeData>.Empty;
+            }
+            else
+            {
+                return uncommonFields._lazyCustomAttributes;
+            }
+
+            ImmutableArray<CSharpAttributeData> initializeCustomAttributes()
+            {
+                ImmutableArray<CSharpAttributeData> attributeData;
                 var containingPEModuleSymbol = _containingType.ContainingPEModule;
-
-                // Could this possibly be an extension method?
-                bool isExtensionAlreadySet = _packedFlags.IsExtensionMethodIsPopulated;
-                bool checkForExtension = isExtensionAlreadySet
-                    ? _packedFlags.IsExtensionMethod
-                    : this.MethodKind == MethodKind.Ordinary
-                        && IsValidExtensionMethodSignature()
-                        && _containingType.MightContainExtensionMethods;
-
-                bool isReadOnlyAlreadySet = _packedFlags.IsReadOnlyPopulated;
-                bool checkForIsReadOnly = isReadOnlyAlreadySet
-                     ? _packedFlags.IsReadOnly
-                     : IsValidReadOnlyTarget;
 
                 bool isExtensionMethod = false;
                 bool isReadOnly = false;
-                if (checkForExtension || checkForIsReadOnly)
-                {
-                    containingPEModuleSymbol.LoadCustomAttributesFilterCompilerAttributes(_handle,
-                        ref attributeData,
-                        out isExtensionMethod,
-                        out isReadOnly);
-                }
-                else
-                {
-                    containingPEModuleSymbol.LoadCustomAttributes(_handle,
-                        ref attributeData);
-                }
+                ArrayBuilder<CSharpAttributeData>? customAttributesBuilder = null;
 
-                if (!isExtensionAlreadySet)
+                try
+                {
+                    foreach (var customAttributeHandle in containingPEModuleSymbol.Module.GetCustomAttributesOrThrow(Handle))
+                    {
+                        if (containingPEModuleSymbol.IsHandleToAttribute(customAttributeHandle, AttributeDescription.CaseSensitiveExtensionAttribute))
+                        {
+                            isExtensionMethod = true;
+                            continue;
+                        }
+
+                        if (containingPEModuleSymbol.IsHandleToAttribute(customAttributeHandle, AttributeDescription.IsReadOnlyAttribute))
+                        {
+                            isReadOnly = true;
+                            continue;
+                        }
+
+                        if (containingPEModuleSymbol.IsHandleToAttribute(customAttributeHandle, AttributeDescription.NullableContextAttribute))
+                        {
+                            continue;
+                        }
+
+                        if (containingPEModuleSymbol.IsHandleToAttribute(customAttributeHandle, AttributeDescription.NullableAttribute))
+                        {
+                            continue;
+                        }
+
+                        customAttributesBuilder ??= ArrayBuilder<CSharpAttributeData>.GetInstance();
+                        customAttributesBuilder.Add(new PEAttributeData(containingPEModuleSymbol, customAttributeHandle));
+                    }
+                }
+                catch (BadImageFormatException)
+                { }
+
+                attributeData = customAttributesBuilder.ToImmutableOrEmptyAndFree();
+
+                if (!_packedFlags.IsExtensionMethodIsPopulated)
                 {
                     _packedFlags.InitializeIsExtensionMethod(isExtensionMethod);
                 }
+                else
+                {
+                    Debug.Assert(_packedFlags.IsExtensionMethod == IsExtensionMethod);
+                }
 
-                if (!isReadOnlyAlreadySet)
+                if (!_packedFlags.IsReadOnlyPopulated)
                 {
                     _packedFlags.InitializeIsReadOnly(isReadOnly);
+                }
+                else
+                {
+                    Debug.Assert(_packedFlags.IsReadOnly == isReadOnly);
                 }
 
                 // Store the result in uncommon fields only if it's not empty.
@@ -935,21 +971,8 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
                 _packedFlags.SetIsCustomAttributesPopulated();
                 return attributeData;
             }
-
-            // Retrieve cached or inferred value.
-            var uncommonFields = _uncommonFields;
-            if (uncommonFields == null)
-            {
-                return ImmutableArray<CSharpAttributeData>.Empty;
-            }
-            else
-            {
-                var attributeData = uncommonFields._lazyCustomAttributes;
-                return attributeData.IsDefault
-                    ? InterlockedOperations.Initialize(ref uncommonFields._lazyCustomAttributes, ImmutableArray<CSharpAttributeData>.Empty)
-                    : attributeData;
-            }
         }
+#nullable restore
 
         internal override IEnumerable<CSharpAttributeData> GetCustomAttributesToEmit(PEModuleBuilder moduleBuilder) => GetAttributes();
 

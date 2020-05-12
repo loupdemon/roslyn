@@ -867,7 +867,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
                             out isReadOnlyAttribute,
                             filterIsReadOnlyAttribute ? AttributeDescription.IsReadOnlyAttribute : default,
                             out _,
-                            default);
+                            AttributeDescription.NullableAttribute);
 
                     if (!paramArrayAttribute.IsNil || !constantAttribute.IsNil)
                     {

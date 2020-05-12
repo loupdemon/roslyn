@@ -573,6 +573,34 @@ End Class");
         }
 
         [Fact, Trait(Traits.Feature, Traits.Features.MetadataAsSource)]
+        [WorkItem(42591, "https://github.com/dotnet/roslyn/issues/42591")]
+        public async Task TestNullableReferenceTypes_01()
+        {
+            const string metadataSource = @"
+#nullable enable
+public class C
+{
+    public string? M1(string? s1) => s1;
+    public string M2(string s1) => s1;
+    public void M3(string? s1, string s2) { }
+}
+";
+            const string symbolName = "C";
+            await GenerateAndVerifySourceAsync(metadataSource, symbolName, LanguageNames.CSharp, $@"#region {FeaturesResources.Assembly} ReferencedAssembly, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+// {CodeAnalysisResources.InMemoryAssembly}
+#endregion
+
+public class [|C|]
+{{
+    public C();
+
+    public string? M1(string? s1);
+    public string M2(string s1);
+    public void M3(string? s1, string s2);
+}}");
+        }
+
+        [Fact, Trait(Traits.Feature, Traits.Features.MetadataAsSource)]
         [WorkItem(38916, "https://github.com/dotnet/roslyn/issues/38916")]
         public async Task TestGenericWithNullableReferenceTypes()
         {
@@ -587,13 +615,13 @@ internal class AllowNullAttribute : System.Attribute { }
 ";
             var symbolName = "C`1";
 
+            // TODO: filter out nullability attributes on type parameters
             await GenerateAndVerifySourceAsync(metadataSource, symbolName, LanguageNames.CSharp, $@"#region {FeaturesResources.Assembly} ReferencedAssembly, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
 // {CodeAnalysisResources.InMemoryAssembly}
 #endregion
 
 using System.Runtime.CompilerServices;
 
-[NullableContextAttribute(1)]
 public interface [|C|]<[NullableAttribute(2)] T>
 {{
     bool Equals([AllowNullAttribute] T other);
@@ -604,7 +632,6 @@ public interface [|C|]<[NullableAttribute(2)] T>
 
 Imports System.Runtime.CompilerServices
 
-<NullableContextAttribute(1)>
 Public Interface [|C|](Of T)
     Function Equals(<AllowNullAttribute> other As T) As Boolean
 End Interface");
@@ -2313,13 +2340,10 @@ class C
 // {CodeAnalysisResources.InMemoryAssembly}
 #endregion
 
-using System.Runtime.CompilerServices;
-
 public class TestType
 {{
     public TestType();
 
-    [NullableContextAttribute(1)]
     public void [|M|]<T>() where T : notnull;
 }}";
 

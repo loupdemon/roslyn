@@ -16,6 +16,7 @@ using Microsoft.CodeAnalysis.CSharp.DocumentationComments;
 using Microsoft.CodeAnalysis.CSharp.Emit;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
+using System.Reflection.Metadata.Ecma335;
 
 namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
 {
@@ -624,25 +625,50 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
 
             if (uncommon.lazyCustomAttributes.IsDefault)
             {
-                var loadedCustomAttributes = ContainingPEModule.GetCustomAttributesForToken(
-                    Handle,
-                    out _,
-                    // Filter out [Extension]
-                    MightContainExtensionMethods ? AttributeDescription.CaseSensitiveExtensionAttribute : default,
-                    out _,
-                    // Filter out [Obsolete], unless it was user defined
-                    (IsRefLikeType && ObsoleteAttributeData is null) ? AttributeDescription.ObsoleteAttribute : default,
-                    out _,
-                    // Filter out [IsReadOnly]
-                    IsReadOnly ? AttributeDescription.IsReadOnlyAttribute : default,
-                    out _,
-                    // Filter out [IsByRefLike]
-                    IsRefLikeType ? AttributeDescription.IsByRefLikeAttribute : default);
-
-                ImmutableInterlocked.InterlockedInitialize(ref uncommon.lazyCustomAttributes, loadedCustomAttributes);
+                uncommon.lazyCustomAttributes = loadCustomAttributes();
             }
 
             return uncommon.lazyCustomAttributes;
+
+            ImmutableArray<CSharpAttributeData> loadCustomAttributes()
+            {
+                ArrayBuilder<CSharpAttributeData> customAttributesBuilder = null;
+
+                try
+                {
+                    var filterExtension = MightContainExtensionMethods;
+                    var filterIsRefLikeType = IsRefLikeType;
+                    var filterObsolete = filterIsRefLikeType && ObsoleteAttributeData is null;
+                    var filterIsReadOnly = IsReadOnly;
+                    foreach (var customAttributeHandle in ContainingPEModule.Module.GetCustomAttributesOrThrow(Handle))
+                    {
+                        if (filterExtension && ContainingPEModule.IsHandleToAttribute(customAttributeHandle, AttributeDescription.CaseSensitiveExtensionAttribute))
+                            continue;
+
+                        if (filterObsolete && ContainingPEModule.IsHandleToAttribute(customAttributeHandle, AttributeDescription.ObsoleteAttribute))
+                            continue;
+
+                        if (filterIsReadOnly && ContainingPEModule.IsHandleToAttribute(customAttributeHandle, AttributeDescription.IsReadOnlyAttribute))
+                            continue;
+
+                        if (filterIsRefLikeType && ContainingPEModule.IsHandleToAttribute(customAttributeHandle, AttributeDescription.IsByRefLikeAttribute))
+                            continue;
+
+                        if (ContainingPEModule.IsHandleToAttribute(customAttributeHandle, AttributeDescription.NullableContextAttribute))
+                            continue;
+
+                        if (ContainingPEModule.IsHandleToAttribute(customAttributeHandle, AttributeDescription.NullableAttribute))
+                            continue;
+
+                        customAttributesBuilder ??= ArrayBuilder<CSharpAttributeData>.GetInstance();
+                        customAttributesBuilder.Add(new PEAttributeData(ContainingPEModule, customAttributeHandle));
+                    }
+                }
+                catch (BadImageFormatException)
+                { }
+
+                return customAttributesBuilder.ToImmutableOrEmptyAndFree();
+            }
         }
 
         internal override IEnumerable<CSharpAttributeData> GetCustomAttributesToEmit(PEModuleBuilder moduleBuilder)

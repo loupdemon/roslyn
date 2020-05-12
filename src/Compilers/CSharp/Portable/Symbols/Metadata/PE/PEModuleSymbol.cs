@@ -327,51 +327,42 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
                     // It is important to capture the last application of the attribute that we run into,
                     // it makes a difference for default and constant values.
 
-                    if (matchesFilter(customAttributeHandle, filterOut1))
+                    if (IsHandleToAttribute(customAttributeHandle, filterOut1))
                     {
                         filteredOutAttribute1 = customAttributeHandle;
                         continue;
                     }
 
-                    if (matchesFilter(customAttributeHandle, filterOut2))
+                    if (IsHandleToAttribute(customAttributeHandle, filterOut2))
                     {
                         filteredOutAttribute2 = customAttributeHandle;
                         continue;
                     }
 
-                    if (matchesFilter(customAttributeHandle, filterOut3))
+                    if (IsHandleToAttribute(customAttributeHandle, filterOut3))
                     {
                         filteredOutAttribute3 = customAttributeHandle;
                         continue;
                     }
 
-                    if (matchesFilter(customAttributeHandle, filterOut4))
+                    if (IsHandleToAttribute(customAttributeHandle, filterOut4))
                     {
                         filteredOutAttribute4 = customAttributeHandle;
                         continue;
                     }
 
-                    if (customAttributesBuilder == null)
-                    {
-                        customAttributesBuilder = ArrayBuilder<CSharpAttributeData>.GetInstance();
-                    }
-
+                    customAttributesBuilder ??= ArrayBuilder<CSharpAttributeData>.GetInstance();
                     customAttributesBuilder.Add(new PEAttributeData(this, customAttributeHandle));
                 }
             }
             catch (BadImageFormatException)
             { }
 
-            if (customAttributesBuilder != null)
-            {
-                return customAttributesBuilder.ToImmutableAndFree();
-            }
-
-            return ImmutableArray<CSharpAttributeData>.Empty;
-
-            bool matchesFilter(CustomAttributeHandle handle, AttributeDescription filter)
-                => filter.Signatures != null && Module.GetTargetAttributeSignatureIndex(handle, filter) != -1;
+            return customAttributesBuilder.ToImmutableOrEmptyAndFree();
         }
+
+        internal bool IsHandleToAttribute(CustomAttributeHandle handle, AttributeDescription filter)
+                => filter.Signatures != null && Module.GetTargetAttributeSignatureIndex(handle, filter) != -1;
 
         internal ImmutableArray<CSharpAttributeData> GetCustomAttributesForToken(EntityHandle token)
         {
@@ -431,7 +422,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Metadata.PE
                 filterOut1: AttributeDescription.CaseSensitiveExtensionAttribute,
                 filteredOutAttribute2: out CustomAttributeHandle isReadOnlyAttribute,
                 filterOut2: AttributeDescription.IsReadOnlyAttribute,
-                filteredOutAttribute3: out _, filterOut3: default,
+                filteredOutAttribute3: out _, filterOut3: AttributeDescription.NullableContextAttribute,
                 filteredOutAttribute4: out _, filterOut4: default);
 
             foundExtension = !extensionAttribute.IsNil;
