@@ -89,3 +89,22 @@ namespace System.Diagnostics.CodeAnalysis
 }
 
 #endif
+
+namespace System.Diagnostics.CodeAnalysis
+{
+    /// <summary>Specifies that the given members will be non-null upon return of the decorated method.</summary>
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property, AllowMultiple = true)]
+    internal sealed class MemberNotNullAttribute : Attribute
+    {
+        public MemberNotNullAttribute(params string[] members) { }
+        public MemberNotNullAttribute(string member) { }
+    }
+
+    /// <summary>Specifies that the given members will be non-null if the method returns with the given 'when' value.</summary>
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property, AllowMultiple = true)]
+    internal sealed class MemberNotNullWhenAttribute : Attribute
+    {
+        public MemberNotNullWhenAttribute(bool when, params string[] members) { }
+        public MemberNotNullWhenAttribute(bool when, string member) { }
+    }
+}

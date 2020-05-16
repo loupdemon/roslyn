@@ -147,7 +147,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         internal DefiniteAssignmentPass(
             CSharpCompilation compilation,
-            Symbol member,
+            Symbol? member,
             BoundNode node,
             EmptyStructTypeCache emptyStructs,
             bool trackUnassignments = false,
@@ -157,7 +157,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                    trackUnassignments)
         {
             this.initiallyAssignedVariables = initiallyAssignedVariables;
-            _sourceAssembly = ((object)member == null) ? null : (SourceAssemblySymbol)member.ContainingAssembly;
+            _sourceAssembly = ((object?)member == null) ? null : (SourceAssemblySymbol)member.ContainingAssembly;
             this.CurrentSymbol = member;
             _unassignedVariableAddressOfSyntaxes = null;
             _requireOutParamsAssigned = true;
@@ -200,7 +200,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
 #if DEBUG
-        protected override void VisitRvalue(BoundExpression node, bool isKnownToBeAnLvalue = false)
+        protected override void VisitRvalue(BoundExpression? node, bool isKnownToBeAnLvalue = false)
         {
             Debug.Assert(
                 node is null ||
@@ -221,11 +221,11 @@ namespace Microsoft.CodeAnalysis.CSharp
         {
             this.Diagnostics.Clear();
             ImmutableArray<ParameterSymbol> methodParameters = MethodParameters;
-            ParameterSymbol methodThisParameter = MethodThisParameter;
+            ParameterSymbol? methodThisParameter = MethodThisParameter;
             _alreadyReported = BitVector.Empty;           // no variables yet reported unassigned
             this.regionPlace = RegionPlace.Before;
             EnterParameters(methodParameters);               // with parameters assigned
-            if ((object)methodThisParameter != null)
+            if ((object?)methodThisParameter != null)
             {
                 EnterParameter(methodThisParameter);
                 if (methodThisParameter.Type.SpecialType != SpecialType.None)
@@ -240,12 +240,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             // check that each out parameter is definitely assigned at the end of the method.  If
             // there's more than one location, then the method is partial and we prefer to report an
             // out parameter in partial method error.
-            Location location;
+            Location? location;
             if (ShouldAnalyzeOutParameters(out location))
             {
                 LeaveParameters(methodParameters, null, location);
                 if ((object?)methodThisParameter != null) LeaveParameter(methodThisParameter, null, location);
 
+                Debug.Assert(State is object);
                 var savedState = this.State;
                 foreach (PendingBranch returnBranch in pendingReturns)
                 {
@@ -845,10 +846,10 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>
         /// Check that the given variable is definitely assigned.  If not, produce an error.
         /// </summary>
-        protected void CheckAssigned(Symbol symbol, SyntaxNode node)
+        protected void CheckAssigned(Symbol? symbol, SyntaxNode node)
         {
             Debug.Assert(!IsConditionalState);
-            if ((object)symbol != null)
+            if ((object?)symbol != null)
             {
                 NoteRead(symbol);
 
@@ -963,6 +964,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         protected virtual void CheckAssigned(BoundExpression expr, FieldSymbol fieldSymbol, SyntaxNode node)
         {
+            Debug.Assert(!IsConditionalState);
             if (this.State.Reachable && !IsAssigned(expr, out int unassignedSlot))
             {
                 ReportUnassignedIfNotCapturedInLocalFunction(fieldSymbol, node, unassignedSlot);
@@ -1882,8 +1884,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             return null;
         }
 
-        protected override void WriteArgument(BoundExpression arg, RefKind refKind, MethodSymbol method)
+        protected override void WriteArgument(BoundExpression arg, RefKind refKind, MethodSymbol? method)
         {
+            // TODO: 'arg' is nullable in the base, but Assign requires non-null
+
             if (refKind == RefKind.Ref)
             {
                 // Though the method might write the argument, in the case of ref arguments it might not,
@@ -1898,7 +1902,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // we assume that external method may write and/or read all of its fields (recursively).
             // Strangely, the native compiler requires the "ref", even for reference types, to exhibit
             // this behavior.
-            if (refKind != RefKind.None && ((object)method == null || method.IsExtern) && arg.Type is TypeSymbol type)
+            if (refKind != RefKind.None && ((object?)method == null || method.IsExtern) && arg.Type is TypeSymbol type)
             {
                 MarkFieldsUsed(type);
             }
@@ -1906,6 +1910,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         protected void CheckAssigned(BoundExpression expr, SyntaxNode node)
         {
+            Debug.Assert(!IsConditionalState);
             if (!this.State.Reachable) return;
             int slot = MakeSlot(expr);
             switch (expr.Kind)
