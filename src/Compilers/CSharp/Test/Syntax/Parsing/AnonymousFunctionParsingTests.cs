@@ -2562,6 +2562,14 @@ public class C
         }
 
         [Fact]
+        public void StaticParenthesizedLambda_CallArgument()
+        {
+            UsingStatement("M(static x => x);");
+
+            //CreateCompilation(test).GetDiagnostics().Verify();
+        }
+
+        [Fact]
         public void StaticAsyncParenthesizedLambdaWithNoParameters()
         {
             var test = @"
