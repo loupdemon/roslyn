@@ -4,6 +4,7 @@
 
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.PooledObjects;
 using System;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -72,7 +73,26 @@ namespace Microsoft.CodeAnalysis.CSharp
             return result;
         }
 
-        protected override void AfterLeftChildHasBeenVisited(BoundBinaryOperator binary)
+        protected override void VisitBinaryOperatorChildren(ArrayBuilder<BoundBinaryOperator> stack)
+        {
+            var binary = stack.Pop();
+            VisitRvalue(binary.Left);
+
+            while (true)
+            {
+                AfterLeftChildHasBeenVisited(binary);
+
+                if (stack.Count == 0)
+                {
+                    break;
+                }
+
+                Unsplit(); // VisitRvalue does this
+                binary = stack.Pop();
+            }
+        }
+
+        private void AfterLeftChildHasBeenVisited(BoundBinaryOperator binary)
         {
             VisitRvalue(binary.Right);
 
