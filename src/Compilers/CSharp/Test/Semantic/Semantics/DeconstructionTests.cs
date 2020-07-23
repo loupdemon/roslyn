@@ -3531,6 +3531,23 @@ IForEachLoopOperation (LoopKind.ForEach, Continue Label Id: 0, Exit Label Id: 1)
         }
 
         [Fact]
+        public void IncompleteForeachDeconstruction_TypeMatchesOtherVariableName()
+        {
+            var source = @"
+class C
+{
+    void M()
+    {
+        foreach ((var i, i))
+    }
+}
+";
+
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics();
+        }
+
+        [Fact]
         public void ForEachNameConflict3()
         {
             string source = @"
