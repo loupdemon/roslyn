@@ -3134,5 +3134,39 @@ static class Ex
                 Diagnostic(ErrorCode.ERR_SwitchCaseSubsumed, "false").WithLocation(49, 16)
                 );
         }
+
+        [Fact, WorkItem(46536, "https://github.com/dotnet/roslyn/issues/46536")]
+        public void Repro_46536()
+        {
+            var source = @"
+public class StateMachine
+{
+    public enum States
+    {
+        Uninitialized,
+        Initialized,
+
+        Opened,
+        Closed,
+    }
+
+    public bool IsValid(States fromState, States toState) => (fromState, toState) switch
+    {
+        (States.Uninitialized, States.Initialized) => true,
+
+        (States.Initialized, States.Opened) => true,
+        (States.Initialized, States.Closed) => true, // --> comment only this line to allow build without errors
+
+        (States.Opened, States.Closed) => true,
+
+        (_, States.Uninitialized) => true, // --> comment only this line to allow build without errors
+
+        _ => false
+    };
+}
+";
+            var comp = CreateCompilation(source);
+            comp.VerifyEmitDiagnostics();
+        }
     }
 }
