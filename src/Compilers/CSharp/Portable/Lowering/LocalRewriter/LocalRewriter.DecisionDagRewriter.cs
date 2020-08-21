@@ -381,9 +381,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 for (int i = 0, length = nodesToLower.Length; i < length; i++)
                 {
                     BoundDecisionDagNode node = nodesToLower[i];
-                    if (loweredNodes.Contains(node))
+                    bool alreadyLowered = loweredNodes.Contains(node);
+                    if (alreadyLowered && !_dagNodeLabels.TryGetValue(node, out _))
                     {
-                        Debug.Assert(!_dagNodeLabels.TryGetValue(node, out _));
                         continue;
                     }
 
@@ -393,7 +393,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
 
                     // If we can generate an IL switch instruction, do so
-                    if (GenerateSwitchDispatch(node, loweredNodes))
+                    if (!alreadyLowered && GenerateSwitchDispatch(node, loweredNodes))
                     {
                         continue;
                     }
