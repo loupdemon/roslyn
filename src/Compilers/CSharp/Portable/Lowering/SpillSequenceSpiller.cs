@@ -738,6 +738,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var generateDummyFieldAccess = false;
                 if (field.FieldSymbol.ContainingType.IsReferenceType)
                 {
+                    Debug.Assert(field.ReceiverOpt is object, "field.ReceiverOpt is null. field.FieldSymbol.ContainingType.TypeKind == {field.FieldSymbol.ContainingType.TypeKind}");
                     // a reference type can always live across await so Spill using leftBuilder
                     receiver = Spill(leftBuilder, VisitExpression(ref leftBuilder, field.ReceiverOpt));
 
@@ -750,10 +751,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                 else if (field.ReceiverOpt is BoundArrayAccess arrayAccess)
                 {
                     // an arrayAccess returns a ref so can only be called after the await, but spill expression and indices
+                    Debug.Assert(arrayAccess.Expression is object, $"arrayAccess.Expression is null. field.FieldSymbol.ContainingType.TypeKind == {field.FieldSymbol.ContainingType.TypeKind}");
                     var expression = VisitExpression(ref leftBuilder, arrayAccess.Expression);
+                    Debug.Assert(expression is object, $"VisitExpression(ref leftBuilder, arrayAccess.Expression) returned null. field.FieldSymbol.ContainingType.TypeKind == {field.FieldSymbol.ContainingType.TypeKind}");
                     expression = Spill(leftBuilder, expression, RefKind.None);
                     var indices = this.VisitExpressionList(ref leftBuilder, arrayAccess.Indices, forceSpill: true);
                     receiver = arrayAccess.Update(expression, indices, arrayAccess.Type);
+                    Debug.Assert(expression is object, $"arrayAccess.Update() returned null. field.FieldSymbol.ContainingType.TypeKind == {field.FieldSymbol.ContainingType.TypeKind}");
                     // dummy array access to trigger IndexOutRangeException or NRE
                     // we only need this if the array access is a receiver since
                     // a[0] = b triggers a NRE/IORE on assignment
@@ -762,10 +766,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
                 else if (field.ReceiverOpt is BoundFieldAccess receiverField)
                 {
+                    Debug.Assert(receiverField.ReceiverOpt is object, $"receiverField.ReceiverOpt is null. receiverField.FieldSymbol.ContainingType.TypeKind == {receiverField.FieldSymbol.ContainingType.TypeKind}. field.FieldSymbol.ContainingType.TypeKind == {field.FieldSymbol.ContainingType.TypeKind}");
                     receiver = fieldWithSpilledReceiver(receiverField, ref leftBuilder, isAssignmentTarget: false);
                 }
                 else
                 {
+                    Debug.Assert(field.ReceiverOpt is object, $"receiver is null on a {field.FieldSymbol.ContainingType.TypeKind} field access");
                     receiver = Spill(leftBuilder, VisitExpression(ref leftBuilder, field.ReceiverOpt), RefKind.Ref);
                 }
 
@@ -773,6 +779,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 if (generateDummyFieldAccess)
                 {
+                    Debug.Assert(field is object, $"field.Update() returned null. field.FieldSymbol.ContainingType.TypeKind == {field.FieldSymbol.ContainingType.TypeKind}");
                     Spill(leftBuilder, field, sideEffectsOnly: true);
                 }
 
