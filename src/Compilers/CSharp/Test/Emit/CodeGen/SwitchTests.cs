@@ -9734,6 +9734,79 @@ class Program
 ");
         }
 
+        [Fact]
+        [WorkItem(48493, "https://github.com/dotnet/roslyn/issues/48493")]
+        public void LambdaInWhenClause_01()
+        {
+            var source = @"
+using System;
+using System.Linq;
+
+namespace Sample
+{
+    internal class Row
+    {
+        public string Message { get; set; }
+    }
+
+    internal class Program
+    {
+        private static void Main()
+        {
+            Console.WriteLine(ProcessRow(new Row()));
+        }
+
+        private static string ProcessRow(Row row)
+        {
+            if (row == null) throw new ArgumentNullException(nameof(row));
+            return row switch
+            {
+                { Message: ""stringA"" } => ""stringB"",
+                var r when new[] { ""stringC"", ""stringD"" }.Any(x => r.Message.Contains(x)) => ""stringE"",
+                { Message: ""stringF"" } => ""stringG"",
+                _ => ""stringH"",
+            };
+        }
+    }
+}
+";
+            var compilation = CreateCompilation(source, options: TestOptions.DebugExe)
+                .VerifyDiagnostics();
+            CompileAndVerify(compilation, expectedOutput: "123333456");
+        }
+
+        [Fact]
+        [WorkItem(48493, "https://github.com/dotnet/roslyn/issues/48493")]
+        public void LambdaInWhenClause_02()
+        {
+            var source = @"
+using System;
+
+internal class Widget
+{
+    public bool IsGood { get; set; }
+}
+
+internal class Program
+{
+    private static bool M0(Func<bool> fn) => fn();
+
+    private static void Main()
+    {
+        Console.Write(new Widget() switch
+        {
+            { IsGood: true } => 1,
+            _ when M0(() => true) => 2,
+            { } => 3,
+        });
+    }
+}
+";
+            var compilation = CreateCompilation(source, options: TestOptions.DebugExe)
+                .VerifyDiagnostics();
+            CompileAndVerify(compilation, expectedOutput: "2");
+        }
+
         #endregion "regression tests"
 
         #region Code Quality tests
