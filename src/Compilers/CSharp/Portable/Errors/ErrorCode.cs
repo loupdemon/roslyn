@@ -1787,7 +1787,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_UnsupportedTypeForRelationalPattern = 8781,
         ERR_RelationalPatternWithNaN = 8782,
 
-        ERR_ConditionalOnLocalFunction = 8783,
+        // ERR_ConditionalOnLocalFunction = 8783,
 
         WRN_GeneratorFailedDuringInitialization = 8784,
         WRN_GeneratorFailedDuringGeneration = 8785,

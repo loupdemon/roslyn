@@ -947,6 +947,11 @@
         <target state="translated">пустые переменные</target>
         <note />
       </trans-unit>
+      <trans-unit id="IDS_FeatureNonStaticConditionalLocalFunctions">
+        <source>non-static conditional local functions</source>
+        <target state="new">non-static conditional local functions</target>
+        <note />
+      </trans-unit>
       <trans-unit id="WRN_AnalyzerReferencesFramework">
         <source>The assembly '{0}' containing type '{1}' references .NET Framework, which is not supported.</source>
         <target state="translated">Сборка "{0}", содержащая тип "{1}", ссылается на платформу .NET Framework, которая не поддерживается.</target>

@@ -947,6 +947,11 @@
         <target state="translated">odrzucenia</target>
         <note />
       </trans-unit>
+      <trans-unit id="IDS_FeatureNonStaticConditionalLocalFunctions">
+        <source>non-static conditional local functions</source>
+        <target state="new">non-static conditional local functions</target>
+        <note />
+      </trans-unit>
       <trans-unit id="WRN_AnalyzerReferencesFramework">
         <source>The assembly '{0}' containing type '{1}' references .NET Framework, which is not supported.</source>
         <target state="translated">Zestaw „{0}” zawierający typ „{1}” odwołuje się do platformy .NET Framework, co nie jest obsługiwane.</target>

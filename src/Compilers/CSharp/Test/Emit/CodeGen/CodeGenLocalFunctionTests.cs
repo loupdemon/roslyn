@@ -5405,7 +5405,7 @@ class C
         }
 
         [Fact]
-        public void LocalFunction_ConditionalAttributeDisallowed()
+        public void LocalFunction_ConditionalAttribute_01()
         {
             var source = @"
 using System.Diagnostics;
@@ -5422,9 +5422,41 @@ class C
 ";
             var comp = CreateCompilation(source, parseOptions: TestOptions.Regular9);
             comp.VerifyDiagnostics(
-                // (9,10): error CS8764: Local function 'local1()' must be 'static' in order to use the Conditional attribute
+                // (9,10): error CS8652: The feature 'non-static conditional local functions' is currently in Preview and *unsupported*. To use Preview features, use the 'preview' language version.
                 //         [Conditional("DEBUG")] // 1
-                Diagnostic(ErrorCode.ERR_ConditionalOnLocalFunction, @"Conditional(""DEBUG"")").WithArguments("local1()").WithLocation(9, 10));
+                Diagnostic(ErrorCode.ERR_FeatureInPreview, @"Conditional(""DEBUG"")").WithArguments("non-static conditional local functions").WithLocation(9, 10));
+
+            comp = CreateCompilation(source, parseOptions: TestOptions.RegularPreview);
+            comp.VerifyDiagnostics();
+        }
+
+        [Fact]
+        public void LocalFunction_ConditionalAttribute_02()
+        {
+            var source = @"
+using System.Diagnostics;
+using System;
+
+class C
+{
+    static void Main()
+    {
+        int x;
+        local1();
+        Console.Write(x);
+
+        [Conditional(""DEBUG"")]
+        void local1() { x = 42; }
+    }
+}
+";
+            var comp = CreateCompilation(source, parseOptions: TestOptions.RegularPreview);
+            comp.VerifyDiagnostics(
+                // (11,23): error CS0165: Use of unassigned local variable 'x'
+                //         Console.Write(x);
+                Diagnostic(ErrorCode.ERR_UseDefViolation, "x").WithArguments("x").WithLocation(11, 23));
+
+            CompileAndVerify(source, parseOptions: TestOptions.RegularPreview.WithPreprocessorSymbols("DEBUG"), expectedOutput: "42");
         }
 
         [Fact]
