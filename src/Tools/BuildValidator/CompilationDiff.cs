@@ -45,8 +45,8 @@ namespace BuildValidator
         public static CompilationDiff Create(FileInfo assemblyFile, Compilation producedCompilation)
         {
             using var peStream = new MemoryStream();
-
-            var emitResult = producedCompilation.Emit(peStream: peStream, options: new EmitOptions(debugInformationFormat: DebugInformationFormat.Embedded, pdbChecksumAlgorithm: HashAlgorithmName.SHA256));
+            using var resources = producedCompilation.CreateDefaultWin32Resources(true, true, null, null);
+            var emitResult = producedCompilation.Emit(peStream: peStream, win32Resources: resources, options: new EmitOptions(debugInformationFormat: DebugInformationFormat.Embedded, highEntropyVirtualAddressSpace: true, pdbChecksumAlgorithm: HashAlgorithmName.SHA256));
 
             using var peFileStream = File.Create(@"C:\Users\rikki\Desktop\scratch\compare-simple\right\simple-rebuild.dll");
             peStream.WriteTo(peFileStream);
