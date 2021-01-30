@@ -84,9 +84,9 @@ function requestWithRetry($uri) {
             return Invoke-RestMethod -uri $uri
             break
         } catch {
-            Write-Error "Error in request to $uri"
-            Write-Error "HTTP $($_.Exception.Response.StatusCode.value__): $($_.Exception.Response.StatusDescription)"
-            Write-Error "Sleeping for 5 seconds before retrying..."
+            Write-Warning "Error in request to $uri"
+            Write-Warning "HTTP $($_.Exception.Response.StatusCode.value__): $($_.Exception.Response.StatusCode)"
+            Write-Warning "Sleeping for 5 seconds before retrying..."
             Start-Sleep -Seconds 5.0
         }
         $i++
@@ -120,10 +120,10 @@ function initialPass() {
         # uncomment the desired condition to filter the builds we measure
         if (
             # use builds from any branch
-            $false
+            # $false
 
             # distrust all PR/feature/release branch builds and only get master CI builds
-            # $refName -ne "refs/heads/master"
+            $refName -ne "refs/heads/master"
 
             # ignore specific PRs which modify infra and thus don't measure the "production" behavior
             # $refName -eq "refs/pulls/50046/merge" -or $refName -eq "refs/pulls/49626/merge"
