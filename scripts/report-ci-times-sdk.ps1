@@ -3,21 +3,21 @@
 . (Join-Path $PSScriptRoot ".." "eng" "build-utils.ps1")
 
 $sdkPipelineId = "136"
-$minDate = [DateTime]"2021-01-22"
-$maxDate = [DateTime]"2021-01-29"
+$minDate = [DateTime]"2021-02-01"
+$maxDate = [DateTime]"2021-02-08"
 
 $baseURL = "https://dev.azure.com/dnceng/public/_apis/"
 $runsURL = "$baseURL/pipelines/$sdkPipelineId/runs?api-version=6.0-preview.1"
 $buildsURL = "$baseURL/build/builds/"
 
 $wantedRecords = @(
-    # "Windows_NT Build_Debug",
-    # "Windows_NT Build_Release",
+    "Windows_NT Build_Debug",
+    "Windows_NT Build_Release",
     
-    # "Windows_NT FullFramework_Build_Debug",
-    # "Windows_NT FullFramework_Build_Release",
+    "Windows_NT FullFramework_Build_Debug",
+    "Windows_NT FullFramework_Build_Release",
 
-    # "Windows_NT TestAsTools_Build_Debug",
+    "Windows_NT TestAsTools_Build_Debug",
 
     # the windows jobs run agent-local and helix tests in parallel in the same task
     # linux+mac runs them in series.
@@ -71,7 +71,7 @@ function initialPass() {
             continue
         }
 
-        if ($run.createdDate -gt $maxDate) {
+        if ($run.createdDate -ge $maxDate) {
             continue
         }
 
@@ -119,7 +119,7 @@ function initialPass() {
                 $job.duration = [DateTime]$record.finishTime - [DateTime]$record.startTime;
                 Write-Host "$($job.kind) record $($job.name) took $($job.duration)"
                 $allJobs.Add($job) | Out-Null
-            } elseif ($record.type -eq "task" -and $record.result -eq "succeeded" -and $record.name -eq "Run Tests in Helix") {
+            } elseif ($record.type -eq "task" -and $record.result -eq "succeeded" -and ($record.name -eq "Run Tests in Helix" -or $record.name -eq "Run Tests in Helix and non Helix in parallel")) {
                 $job = [Job]::new()
                 $job.name = $record.name;
                 $job.kind = "helix-test"
@@ -147,10 +147,11 @@ foreach ($job in $allJobs) {
     }
 }
 
-Write-Host "Build jobs time: $buildTime"
-Write-Host "Helix test tasks time: $testTime"
+Write-Host "In date range $minDate - $maxDate (exclusive):"
+Write-Host "Build time: $($buildTime.TotalHours) machine hours"
+Write-Host "Helix test time: $($testTime.TotalHours) machine hours"
 
 # here the test time is for a task and the build time is for the containing job
 # the build time already accounts for the task time
 $proportion = $testTime / $buildTime
-Write-Host "Proportion of machine time used to run Helix tests: $proportion"
+Write-Host "Proportion of machine time used to run Helix tests: $($proportion.ToString("P"))"

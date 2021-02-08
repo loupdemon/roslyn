@@ -4,8 +4,8 @@
 . (Join-Path $PSScriptRoot ".." "eng" "build-utils.ps1")
 
 $roslynPipelineId = "15"
-$minDate = [DateTime]"2021-01-22"
-$maxDate = [DateTime]"2021-01-29"
+$minDate = [DateTime]"2021-02-01"
+$maxDate = [DateTime]"2021-02-08"
 
 $baseURL = "https://dev.azure.com/dnceng/public/_apis/"
 $runsURL = "$baseURL/pipelines/$roslynPipelineId/runs?api-version=6.0-preview.1"
@@ -91,7 +91,7 @@ function initialPass() {
             continue
         }
 
-        if ($run.createdDate -gt $maxDate) {
+        if ($run.createdDate -ge $maxDate) {
             continue
         }
 
@@ -160,8 +160,10 @@ foreach ($job in $allJobs) {
     }
 }
 
-Write-Host "Build time: $buildTime"
-Write-Host "Helix test time: $testTime"
+Write-Host "In date range $minDate - $maxDate (exclusive):"
+Write-Host "Build time: $($buildTime.TotalHours) machine hours"
+Write-Host "Helix test time: $($testTime.TotalHours) machine hours"
+Write-Host "Total time: $(($buildTime + $testTime).TotalHours) machine hours"
 
 $proportion = $testTime / ($buildTime + $testTime)
-Write-Host "Proportion of machine time used to run Helix tests: $proportion"
+Write-Host "Proportion of machine time used to run Helix tests: $($proportion.ToString("P"))"
