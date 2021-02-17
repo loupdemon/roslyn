@@ -18,6 +18,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.DiaSymReader.Tools;
 using Microsoft.Extensions.Logging;
 using Microsoft.Metadata.Tools;
 
@@ -141,6 +142,26 @@ namespace BuildValidator
                         writeVisualization(originalPeMdvPath, optionsReader.PeReader.GetMetadataReader());
                         writeVisualization(originalPdbMdvPath, optionsReader.PdbReader);
 
+                        var originalPdbXmlPath = Path.Combine(originalPath, assemblyName + ".pdb.xml");
+                        using var originalPdbXml = File.Create(originalPdbXmlPath);
+
+                        var rebuildPdbXmlPath = Path.Combine(rebuildPath, assemblyName + ".pdb.xml");
+
+                        var pdbToXmlOptions = PdbToXmlOptions.ResolveTokens
+                            | PdbToXmlOptions.ThrowOnError
+                            | PdbToXmlOptions.ExcludeScopes
+                            | PdbToXmlOptions.IncludeSourceServerInformation
+                            | PdbToXmlOptions.IncludeEmbeddedSources
+                            | PdbToXmlOptions.IncludeTokens
+                            | PdbToXmlOptions.IncludeMethodSpans;
+
+                        PdbToXmlConverter.ToXml(
+                            new StreamWriter(originalPdbXml),
+                            pdbStream: new UnmanagedMemoryStream(optionsReader.PdbReader.MetadataPointer, optionsReader.PdbReader.MetadataLength),
+                            peStream: new MemoryStream(originalBytes),
+                            options: pdbToXmlOptions,
+                            methodName: null);
+
                         var rebuildPeMdvPath = Path.Combine(rebuildPath, assemblyName + ".pe.mdv");
                         var rebuildPdbMdvPath = Path.Combine(rebuildPath, assemblyName + ".pdb.mdv");
                         fixed (byte* ptr = rebuildBytes)
@@ -156,6 +177,14 @@ namespace BuildValidator
                             {
                                 var rebuildPdbReader = provider.GetMetadataReader(MetadataReaderOptions.Default);
                                 writeVisualization(rebuildPdbMdvPath, rebuildPdbReader);
+
+                                using var rebuildPdbXml = File.Create(rebuildPdbXmlPath);
+                                PdbToXmlConverter.ToXml(
+                                    new StreamWriter(rebuildPdbXml),
+                                    pdbStream: new UnmanagedMemoryStream(rebuildPdbReader.MetadataPointer, rebuildPdbReader.MetadataLength),
+                                    peStream: new MemoryStream(rebuildBytes),
+                                    options: pdbToXmlOptions,
+                                    methodName: null);
                             }
                         }
 
@@ -168,6 +197,7 @@ namespace BuildValidator
 
                         File.WriteAllText(Path.Combine(assemblyDebugPath, "compare-pe.mdv.ps1"), $@"code --diff (Join-Path $PSScriptRoot ""{originalPeMdvPath.Substring(assemblyDebugPath.Length)}"") (Join-Path $PSScriptRoot ""{rebuildPeMdvPath.Substring(assemblyDebugPath.Length)}"")");
                         File.WriteAllText(Path.Combine(assemblyDebugPath, "compare-pdb.mdv.ps1"), $@"code --diff (Join-Path $PSScriptRoot ""{originalPdbMdvPath.Substring(assemblyDebugPath.Length)}"") (Join-Path $PSScriptRoot ""{rebuildPdbMdvPath.Substring(assemblyDebugPath.Length)}"")");
+                        File.WriteAllText(Path.Combine(assemblyDebugPath, "compare-pdb.xml.ps1"), $@"code --diff (Join-Path $PSScriptRoot ""{originalPdbXmlPath.Substring(assemblyDebugPath.Length)}"") (Join-Path $PSScriptRoot ""{rebuildPdbXmlPath.Substring(assemblyDebugPath.Length)}"")");
                         File.WriteAllText(Path.Combine(assemblyDebugPath, "compare-il.ps1"), $@"code --diff (Join-Path $PSScriptRoot ""{ildasmOriginalOutputPath.Substring(assemblyDebugPath.Length)}"") (Join-Path $PSScriptRoot ""{ildasmRebuildOutputPath.Substring(assemblyDebugPath.Length)}"")");
                     }
                 }

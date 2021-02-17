@@ -213,7 +213,7 @@ namespace BuildValidator
 
                 var compilation = buildConstructor.CreateCompilation(
                     optionsReader,
-                    Path.GetFileNameWithoutExtension(originalBinary.Name));
+                    originalBinary.Name);
 
                 var compilationDiff = CompilationDiff.Create(originalBinary, optionsReader, compilation, getDebugEntryPoint(), logger, options);
                 return compilationDiff;
