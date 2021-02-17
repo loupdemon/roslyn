@@ -211,10 +211,10 @@ namespace BuildValidator
             return (compilationOptions, parseOptions);
         }
 
-        private static (OptimizationLevel, bool) GetOptimizationLevel(string optimizationLevel)
+        private static (OptimizationLevel, bool) GetOptimizationLevel(string? optimizationLevel)
             => optimizationLevel switch
             {
-                "debug" => (OptimizationLevel.Debug, false),
+                null or "debug" => (OptimizationLevel.Debug, false),
                 "debug-plus" => (OptimizationLevel.Debug, true),
                 "release" => (OptimizationLevel.Release, false),
                 _ => throw new InvalidDataException($"Optimization \"{optimizationLevel}\" level not recognized")
@@ -242,7 +242,7 @@ namespace BuildValidator
             var pdbCompilationOptions = optionsReader.GetMetadataCompilationOptions();
 
             var langVersionString = pdbCompilationOptions.GetUniqueOption("language-version");
-            var optimization = pdbCompilationOptions.GetUniqueOption("optimization");
+            pdbCompilationOptions.TryGetUniqueOption("optimization", out var optimization);
             pdbCompilationOptions.TryGetUniqueOption("define", out var define);
             pdbCompilationOptions.TryGetUniqueOption("strict", out var strict);
             pdbCompilationOptions.TryGetUniqueOption("checked", out var checkedString);
