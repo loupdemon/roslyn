@@ -4,8 +4,8 @@
 . (Join-Path $PSScriptRoot ".." "eng" "build-utils.ps1")
 
 $roslynPipelineId = "15"
-$minDate = [DateTime]"2021-01-14"
-$maxDate = [DateTime]"2021-01-21"
+$minDate = [DateTime]"2021-02-12"
+$maxDate = [DateTime]"2021-02-13"
 
 $baseURL = "https://dev.azure.com/dnceng/public/_apis/"
 $runsURL = "$baseURL/pipelines/$roslynPipelineId/runs?api-version=6.0-preview.1"
@@ -63,6 +63,8 @@ class Job {
     [Nullable[TimeSpan]] $prereqFinish
     [Nullable[TimeSpan]] $startDelay
     [TimeSpan] $duration
+    [Nullable[TimeSpan]] $startDelayError
+    [Nullable[TimeSpan]] $durationError
 }
 
 function Test-Any() {
@@ -120,10 +122,10 @@ function initialPass() {
         # uncomment the desired condition to filter the builds we measure
         if (
             # use builds from any branch
-            $false
+            # $false
 
             # distrust all PR/feature/release branch builds and only get master CI builds
-            # $refName -ne "refs/heads/master"
+            $refName -ne "refs/heads/master"
 
             # ignore specific PRs which modify infra and thus don't measure the "production" behavior
             # $refName -eq "refs/pulls/50046/merge" -or $refName -eq "refs/pulls/49626/merge"
@@ -226,12 +228,16 @@ function fillPrereqTimes($allJobs) {
 
 function getAverageTimes([string]$jobName) {
     $matchingJobs = $allJobs | Where-Object { $_.name -eq $jobName }
+    $matchingJobsCount = ($matchingJobs | Measure-Object).Count
     function getAverageTime($propName) {
-        $measurement = $matchingJobs | Select-Object -ExpandProperty $propName | Measure-Object -Property Ticks -Average
+        $measurement = $matchingJobs | Select-Object -ExpandProperty $propName | Measure-Object -Property Ticks -Average -StandardDeviation
         if ($null -ne $measurement) {
-            return [TimeSpan]::new($measurement.Average)
+            if (($measurement.Average - $measurement.StandardDeviation) -lt 0) {
+                write-host "$jobName $propName Average $([TimeSpan]::new($measurement.Average)) StandardDeviation $([TimeSpan]::new($measurement.StandardDeviation)) Diff $([TimeSpan]::new($measurement.Average - $measurement.StandardDeviation))"
+            }
+            return [PSCustomObject]@{ Average = [TimeSpan]::new($measurement.Average); StandardDeviation = $measurement.StandardDeviation }
         } else {
-            return [TimeSpan]::Zero
+            return [PSCustomObject]@{ Average = [TimeSpan]::Zero; StandardDeviation = [TimeSpan]::Zero }
         }
     }
 
@@ -239,10 +245,16 @@ function getAverageTimes([string]$jobName) {
     $averageJob.runId = 0
     $averageJob.attempt = 0
     $averageJob.name = $jobName
-    $averageJob.relativeStart = getAverageTime("relativeStart")
-    $averageJob.prereqFinish = getAverageTime("prereqFinish")
-    $averageJob.startDelay = getAverageTime("startDelay")
-    $averageJob.duration = getAverageTime("duration")
+    $averageJob.relativeStart = (getAverageTime "relativeStart").Average
+    $averageJob.prereqFinish = (getAverageTime "prereqFinish").Average
+
+    $startDelay = (getAverageTime "startDelay")
+    $averageJob.startDelay = $startDelay.Average
+    $averageJob.startDelayError = if ($matchingJobsCount -le 0) { [TimeSpan]::Zero } else { [TimeSpan]::new($startDelay.StandardDeviation) }
+
+    $duration = (getAverageTime "duration")
+    $averageJob.duration = $duration.Average
+    $averageJob.durationError = if ($matchingJobsCount -le 0) { [TimeSpan]::Zero } else { [TimeSpan]::new($duration.StandardDeviation) }
     return $averageJob
 }
 
