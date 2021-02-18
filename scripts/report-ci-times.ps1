@@ -4,8 +4,8 @@
 . (Join-Path $PSScriptRoot ".." "eng" "build-utils.ps1")
 
 $roslynPipelineId = "15"
-$minDate = [DateTime]"2021-02-12"
-$maxDate = [DateTime]"2021-02-13"
+$minDate = [DateTime]"2021-02-10"
+$maxDate = [DateTime]"2021-02-17"
 
 $baseURL = "https://dev.azure.com/dnceng/public/_apis/"
 $runsURL = "$baseURL/pipelines/$roslynPipelineId/runs?api-version=6.0-preview.1"
@@ -122,10 +122,10 @@ function initialPass() {
         # uncomment the desired condition to filter the builds we measure
         if (
             # use builds from any branch
-            # $false
+            $false
 
             # distrust all PR/feature/release branch builds and only get master CI builds
-            $refName -ne "refs/heads/master"
+            # $refName -ne "refs/heads/master"
 
             # ignore specific PRs which modify infra and thus don't measure the "production" behavior
             # $refName -eq "refs/pulls/50046/merge" -or $refName -eq "refs/pulls/49626/merge"
@@ -232,9 +232,6 @@ function getAverageTimes([string]$jobName) {
     function getAverageTime($propName) {
         $measurement = $matchingJobs | Select-Object -ExpandProperty $propName | Measure-Object -Property Ticks -Average -StandardDeviation
         if ($null -ne $measurement) {
-            if (($measurement.Average - $measurement.StandardDeviation) -lt 0) {
-                write-host "$jobName $propName Average $([TimeSpan]::new($measurement.Average)) StandardDeviation $([TimeSpan]::new($measurement.StandardDeviation)) Diff $([TimeSpan]::new($measurement.Average - $measurement.StandardDeviation))"
-            }
             return [PSCustomObject]@{ Average = [TimeSpan]::new($measurement.Average); StandardDeviation = $measurement.StandardDeviation }
         } else {
             return [PSCustomObject]@{ Average = [TimeSpan]::Zero; StandardDeviation = [TimeSpan]::Zero }
@@ -250,11 +247,11 @@ function getAverageTimes([string]$jobName) {
 
     $startDelay = (getAverageTime "startDelay")
     $averageJob.startDelay = $startDelay.Average
-    $averageJob.startDelayError = if ($matchingJobsCount -le 0) { [TimeSpan]::Zero } else { [TimeSpan]::new($startDelay.StandardDeviation) }
+    $averageJob.startDelayError = if ($matchingJobsCount -le 0) { [TimeSpan]::Zero } else { [TimeSpan]::new($startDelay.StandardDeviation / [math]::sqrt($matchingJobsCount)) }
 
     $duration = (getAverageTime "duration")
     $averageJob.duration = $duration.Average
-    $averageJob.durationError = if ($matchingJobsCount -le 0) { [TimeSpan]::Zero } else { [TimeSpan]::new($duration.StandardDeviation) }
+    $averageJob.durationError = if ($matchingJobsCount -le 0) { [TimeSpan]::Zero } else { [TimeSpan]::new($duration.StandardDeviation / [math]::sqrt($matchingJobsCount)) }
     return $averageJob
 }
 
@@ -267,5 +264,38 @@ foreach ($jobName in $prerequisites.Keys) {
 $averageJobs.Add((getAverageTimes("0_Run_Created")))
 
 $outDir = Join-Path $ArtifactsDir "ci-times.csv"
-$averageJobs + $allJobs | Sort-Object -Property runId,name | Export-Csv -Path $outDir
+$finalData = $averageJobs + $allJobs 
+    | Sort-Object -Property runId,name
+    # | Where-Object -Property Name -In @(
+    # "1_Build_Windows_Debug",
+    # "3_Build_Windows_Release"
+
+    # "6_Test_macOS_Debug",
+    # "6_Test_Linux_Debug",
+    # "2_Test_Windows_CoreClr_Debug",
+    # "2_Test_Windows_Desktop_Debug_32",
+    # "2_Test_Windows_Desktop_Debug_64",
+    # "2_Test_Windows_Desktop_Spanish_Debug_32",
+    # "4_Test_Windows_CoreClr_Release",
+    # "4_Test_Windows_Desktop_Release_32",
+    # "4_Test_Windows_Desktop_Release_64",
+    # "4_Test_Windows_Desktop_Spanish_Release_32"
+    # )
+    # | Sort-Object -Property startDelay
+    # | Sort-Object -Property duration
+
+$retryCount = 0
+while ($retryCount -lt 3) {
+    try {
+        $finalData | Export-Csv -Path $outDir
+        break
+    }
+    catch {
+        [Console]::Beep(500,300)
+        Write-Host $_.Exception
+        Write-Host "Retrying in 5 seconds..."
+        Start-Sleep -Seconds 5.0
+        $retryCount++
+    }
+}
 Write-Host "Exported CSV to $outDir"
