@@ -4324,7 +4324,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             else
             {
                 (consequence, consequenceConversion, consequenceRValue) = visitConditionalOperand(consequenceState, originalConsequence);
-                Unsplit();
+                var ccs = IsConditionalState;
+                var (cwt, cwf) = ccs ? (StateWhenTrue, StateWhenFalse) : (State, State);
+
                 consequenceState = this.State;
                 consequenceEndReachable = consequenceState.Reachable;
 
@@ -8182,22 +8184,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             return null;
         }
 
-        private void SplitIfBooleanConstant(BoundExpression node)
-        {
-            if (node.ConstantValue is { IsBoolean: true, BooleanValue: bool booleanValue })
-            {
-                Split();
-                if (booleanValue)
-                {
-                    StateWhenFalse = UnreachableState();
-                }
-                else
-                {
-                    StateWhenTrue = UnreachableState();
-                }
-            }
-        }
-
         public override BoundNode? VisitFieldAccess(BoundFieldAccess node)
         {
             var updatedSymbol = VisitMemberAccess(node, node.ReceiverOpt, node.FieldSymbol);
@@ -9052,11 +9038,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         public override BoundNode? VisitLiteral(BoundLiteral node)
         {
             var result = base.VisitLiteral(node);
-
-            Debug.Assert(!IsConditionalState);
             SetResultType(node, TypeWithState.Create(node.Type, node.Type?.CanContainNull() != false && node.ConstantValue?.IsNull == true ? NullableFlowState.MaybeDefault : NullableFlowState.NotNull));
-
-            SplitIfBooleanConstant(node);
             return result;
         }
 
