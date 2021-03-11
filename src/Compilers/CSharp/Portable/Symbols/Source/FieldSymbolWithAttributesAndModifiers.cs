@@ -331,6 +331,11 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                 }
             }
 
+            if (NullableWalker.IsOutputMoreStrictThanInput(TypeWithAnnotations, this.GetFlowAnalysisAnnotations()))
+            {
+                diagnostics.Add(ErrorCode.WRN_FieldAllowNull, this.ErrorLocation, this);
+            }
+
             base.PostDecodeWellKnownAttributes(boundAttributes, allAttributeSyntaxNodes, diagnostics, symbolPart, decodedData);
         }
 

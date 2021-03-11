@@ -7529,15 +7529,14 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         private bool IsPropertyOutputMoreStrictThanInput(PropertySymbol property)
         {
-            return IsPropertyOutputMoreStrictThanInput(property, IsAnalyzingAttribute);
+            return IsOutputMoreStrictThanInput(property.TypeWithAnnotations, IsAnalyzingAttribute ? FlowAnalysisAnnotations.None : property.GetFlowAnalysisAnnotations());
         }
 
-        internal static bool IsPropertyOutputMoreStrictThanInput(PropertySymbol property, bool isAnalyzingAttribute)
+        internal static bool IsOutputMoreStrictThanInput(TypeWithAnnotations type, FlowAnalysisAnnotations annotations)
         {
-            var type = property.TypeWithAnnotations;
-            var annotations = isAnalyzingAttribute ? FlowAnalysisAnnotations.None : property.GetFlowAnalysisAnnotations();
-            var lValueType = ApplyLValueAnnotations(type, annotations);
-            if (lValueType.NullableAnnotation.IsOblivious() || !lValueType.CanBeAssignedNull || (annotations & FlowAnalysisAnnotations.DisallowNull) != 0)
+            if (type.NullableAnnotation.IsOblivious()
+                || !ApplyLValueAnnotations(type, annotations).CanBeAssignedNull
+                || (annotations & FlowAnalysisAnnotations.DisallowNull) != 0)
             {
                 return false;
             }

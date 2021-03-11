@@ -992,6 +992,11 @@
         <target state="translated">Nie porównuj wartości wskaźników funkcji</target>
         <note />
       </trans-unit>
+      <trans-unit id="WRN_FieldAllowNull">
+        <source>Field '{0}' should not allow null input because its output is non-null.</source>
+        <target state="new">Field '{0}' should not allow null input because its output is non-null.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="WRN_ParameterNotNullIfNotNull">
         <source>Parameter '{0}' must have a non-null value when exiting because parameter '{1}' is non-null.</source>
         <target state="translated">Parametr „{0}” musi mieć wartość inną niż null podczas kończenia działania, ponieważ parametr „{1}” ma wartość inną niż null.</target>

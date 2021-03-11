@@ -6603,4 +6603,7 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
   <data name="WRN_AutoPropertyAllowNull" xml:space="preserve">
     <value>Auto-implemented property '{0}' should not allow null input because its output is non-null.</value>
   </data>
+  <data name="WRN_FieldAllowNull" xml:space="preserve">
+    <value>Field '{0}' should not allow null input because its output is non-null.</value>
+  </data>
 </root>

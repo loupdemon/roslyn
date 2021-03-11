@@ -992,6 +992,11 @@
         <target state="translated">Não comparar valores de ponteiro de função</target>
         <note />
       </trans-unit>
+      <trans-unit id="WRN_FieldAllowNull">
+        <source>Field '{0}' should not allow null input because its output is non-null.</source>
+        <target state="new">Field '{0}' should not allow null input because its output is non-null.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="WRN_ParameterNotNullIfNotNull">
         <source>Parameter '{0}' must have a non-null value when exiting because parameter '{1}' is non-null.</source>
         <target state="translated">O parâmetro '{0}' precisa ter um valor não nulo durante a saída porque o parâmetro '{1}' não é nulo.</target>

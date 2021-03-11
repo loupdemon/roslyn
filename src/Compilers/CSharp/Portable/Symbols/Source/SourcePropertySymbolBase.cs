@@ -1362,7 +1362,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             Debug.Assert(_lazyCustomAttributesBag.IsDecodedWellKnownAttributeDataComputed);
             Debug.Assert(symbolPart == AttributeLocation.None);
 
-            if (IsAutoProperty && NullableWalker.IsPropertyOutputMoreStrictThanInput(this, isAnalyzingAttribute: false))
+            if (IsAutoProperty && NullableWalker.IsOutputMoreStrictThanInput(TypeWithAnnotations, this.GetFlowAnalysisAnnotations()))
             {
                 diagnostics.Add(ErrorCode.WRN_AutoPropertyAllowNull, Location, this);
             }

@@ -1930,6 +1930,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         ERR_RecordAmbigCtor = 8910,
         ERR_FunctionPointerTypesInAttributeNotSupported = 8911,
         WRN_AutoPropertyAllowNull = 8912,
+        WRN_FieldAllowNull = 8913,
 
         #endregion diagnostics introduced for C# 9.0
 
