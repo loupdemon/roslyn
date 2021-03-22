@@ -300,6 +300,9 @@ namespace BuildValidator
                 ? new UnmanagedMemoryStream(win32Resources.Pointer, win32Resources.Length)
                 : null;
 
+            using var resFile = File.OpenWrite("artifacts/win32res.zip");
+            win32ResourceStream?.CopyTo(resFile);
+
             var sourceLink = optionsReader.GetSourceLinkUTF8();
 
             var debugEntryPoint = getDebugEntryPoint();
