@@ -130,6 +130,9 @@ namespace BuildValidator
             ILogger logger)
         {
             using var rebuildPeStream = new MemoryStream();
+
+            // TODO: allow emitOptions as an input, extract 'makeEmitOptions',
+            // then compare the compilation options blob as part of the compilation diff
             var emitResult = BuildConstructor.Emit(
                 rebuildPeStream,
                 optionsReader,

@@ -301,7 +301,11 @@ namespace BuildValidator
                 : null;
 
             using var resFile = File.OpenWrite("artifacts/win32res.zip");
-            win32ResourceStream?.CopyTo(resFile);
+            if (win32ResourceStream is not null)
+            {
+                win32ResourceStream.CopyTo(resFile);
+                win32ResourceStream.Position = 0;
+            }
 
             var sourceLink = optionsReader.GetSourceLinkUTF8();
 

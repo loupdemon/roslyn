@@ -852,48 +852,7 @@ namespace Microsoft.Cci
             }
             else
             {
-                var compilerVersion = typeof(Compilation).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
-                WriteValue(CompilationOptionNames.CompilationOptionsVersion, CompilationOptionsSchemaVersion.ToString());
-                WriteValue(CompilationOptionNames.CompilerVersion, compilerVersion);
-
-                WriteValue(CompilationOptionNames.Language, module.CommonCompilation.Options.Language);
-                WriteValue(CompilationOptionNames.SourceFileCount, module.CommonCompilation.SyntaxTrees.Count().ToString());
-
-                if (module.EmitOptions.FallbackSourceFileEncoding != null)
-                {
-                    WriteValue(CompilationOptionNames.FallbackEncoding, module.EmitOptions.FallbackSourceFileEncoding.WebName);
-                }
-
-                if (module.EmitOptions.DefaultSourceFileEncoding != null)
-                {
-                    WriteValue(CompilationOptionNames.DefaultEncoding, module.EmitOptions.DefaultSourceFileEncoding.WebName);
-                }
-
-                int portabilityPolicy = 0;
-                if (module.CommonCompilation.Options.AssemblyIdentityComparer is DesktopAssemblyIdentityComparer identityComparer)
-                {
-                    portabilityPolicy |= identityComparer.PortabilityPolicy.SuppressSilverlightLibraryAssembliesPortability ? 0b1 : 0;
-                    portabilityPolicy |= identityComparer.PortabilityPolicy.SuppressSilverlightPlatformAssembliesPortability ? 0b10 : 0;
-                }
-
-                if (portabilityPolicy != 0)
-                {
-                    WriteValue(CompilationOptionNames.PortabilityPolicy, portabilityPolicy.ToString());
-                }
-
-                var optimizationLevel = module.CommonCompilation.Options.OptimizationLevel;
-                var debugPlusMode = module.CommonCompilation.Options.DebugPlusMode;
-                if (optimizationLevel != OptimizationLevel.Debug || debugPlusMode)
-                {
-                    WriteValue(CompilationOptionNames.Optimization, optimizationLevel.ToPdbSerializedString(debugPlusMode));
-                }
-
-                var platform = module.CommonCompilation.Options.Platform;
-                WriteValue(CompilationOptionNames.Platform, platform.ToString());
-
-                var runtimeVersion = typeof(object).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-                WriteValue(CompilationOptionNames.RuntimeVersion, runtimeVersion);
-
+                WriteCompilationOptionsBlob(module.CommonCompilation, module.EmitOptions, builder);
                 module.CommonCompilation.SerializePdbEmbeddedCompilationOptions(builder);
             }
 
@@ -901,6 +860,51 @@ namespace Microsoft.Cci
                 parent: EntityHandle.ModuleDefinition,
                 kind: _debugMetadataOpt.GetOrAddGuid(PortableCustomDebugInfoKinds.CompilationOptions),
                 value: _debugMetadataOpt.GetOrAddBlob(builder));
+        }
+
+        internal static void WriteCompilationOptionsBlob(Compilation compilation, EmitOptions emitOptions, BlobBuilder builder)
+        {
+            var compilerVersion = typeof(Compilation).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+            WriteValue(CompilationOptionNames.CompilationOptionsVersion, CompilationOptionsSchemaVersion.ToString());
+            WriteValue(CompilationOptionNames.CompilerVersion, compilerVersion);
+
+            WriteValue(CompilationOptionNames.Language, compilation.Options.Language);
+            WriteValue(CompilationOptionNames.SourceFileCount, compilation.SyntaxTrees.Count().ToString());
+
+            if (emitOptions.FallbackSourceFileEncoding != null)
+            {
+                WriteValue(CompilationOptionNames.FallbackEncoding, emitOptions.FallbackSourceFileEncoding.WebName);
+            }
+
+            if (emitOptions.DefaultSourceFileEncoding != null)
+            {
+                WriteValue(CompilationOptionNames.DefaultEncoding, emitOptions.DefaultSourceFileEncoding.WebName);
+            }
+
+            int portabilityPolicy = 0;
+            if (compilation.Options.AssemblyIdentityComparer is DesktopAssemblyIdentityComparer identityComparer)
+            {
+                portabilityPolicy |= identityComparer.PortabilityPolicy.SuppressSilverlightLibraryAssembliesPortability ? 0b1 : 0;
+                portabilityPolicy |= identityComparer.PortabilityPolicy.SuppressSilverlightPlatformAssembliesPortability ? 0b10 : 0;
+            }
+
+            if (portabilityPolicy != 0)
+            {
+                WriteValue(CompilationOptionNames.PortabilityPolicy, portabilityPolicy.ToString());
+            }
+
+            var optimizationLevel = compilation.Options.OptimizationLevel;
+            var debugPlusMode = compilation.Options.DebugPlusMode;
+            if (optimizationLevel != OptimizationLevel.Debug || debugPlusMode)
+            {
+                WriteValue(CompilationOptionNames.Optimization, optimizationLevel.ToPdbSerializedString(debugPlusMode));
+            }
+
+            var platform = compilation.Options.Platform;
+            WriteValue(CompilationOptionNames.Platform, platform.ToString());
+
+            var runtimeVersion = typeof(object).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            WriteValue(CompilationOptionNames.RuntimeVersion, runtimeVersion);
 
             void WriteValue(string key, string value)
             {

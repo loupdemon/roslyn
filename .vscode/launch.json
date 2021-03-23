@@ -13,6 +13,7 @@
       "program": "${workspaceFolder}/artifacts/bin/BuildValidator/Debug/netcoreapp3.1/BuildValidator.dll",
       "args": [
         "--assembliesPath", "./artifacts/obj/Microsoft.CodeAnalysis.CSharp.WinRT.UnitTests/Debug/net472/",
+        "--exclude", "ref",
         "--referencesPath", "./artifacts/bin",
         "--referencesPath", "C:/Program Files/dotnet/packs/",
         "--debugPath", "./artifacts/BuildValidator",
