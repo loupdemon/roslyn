@@ -23,12 +23,22 @@ using Roslyn.Utilities;
 using Xunit;
 using Roslyn.Test.Utilities;
 using System.Collections.Generic;
+using Xunit.Abstractions;
+using Microsoft.CodeAnalysis.CSharp.Test.Utilities;
 
 namespace Microsoft.CodeAnalysis.Rebuild.UnitTests
 {
-    internal static class RoundTripUtil
+    // TODO: perhaps this shouldn't be a base class.
+    // instead, maybe we could make it a field on our individual rebuild test classes.
+    public abstract class RebuildTestBase : CSharpTestBase
     {
-        public static void VerifyRoundTrip(
+        protected ITestOutputHelper Output { get; }
+        protected RebuildTestBase(ITestOutputHelper output)
+        {
+            Output = output;
+        }
+
+        protected void VerifyRoundTrip(
             MemoryStream peStream,
             MemoryStream? pdbStream,
             string assemblyFileName,
@@ -58,7 +68,7 @@ namespace Microsoft.CodeAnalysis.Rebuild.UnitTests
             Assert.Equal(pdbStream?.ToArray(), rebuildPdbStream?.ToArray());
         }
 
-        public static void VerifyMetadataReferenceInfo(CompilationOptionsReader optionsReader, ImmutableArray<MetadataReference> metadataReferences)
+        protected void VerifyMetadataReferenceInfo(CompilationOptionsReader optionsReader, ImmutableArray<MetadataReference> metadataReferences)
         {
             var count = 0;
             foreach (var info in optionsReader.GetMetadataReferences())
@@ -87,7 +97,7 @@ namespace Microsoft.CodeAnalysis.Rebuild.UnitTests
             public void Dispose() => PEReader.Dispose();
         }
 
-        public static unsafe void VerifyRoundTrip<TCompilation>(TCompilation original, EmitOptions? emitOptions = null)
+        protected unsafe void VerifyRoundTrip<TCompilation>(TCompilation original, EmitOptions? emitOptions = null)
             where TCompilation : Compilation
         {
             Assert.True(original.SyntaxTrees.All(x => !string.IsNullOrEmpty(x.FilePath)));
@@ -183,40 +193,53 @@ namespace Microsoft.CodeAnalysis.Rebuild.UnitTests
             }
         }
 
-        private static void AssertImagesEqual(
+        private void AssertImagesEqual(
             EmitInfo originalEmit,
             EmitInfo rebuildEmit)
         {
             if (!originalEmit.PEBytes.SequenceEqual(rebuildEmit.PEBytes))
             {
-                var originalMdv = getMdv(originalEmit.PEReader.GetMetadataReader());
-                var rebuildMdv = getMdv(rebuildEmit.PEReader.GetMetadataReader());
+                var originalMdv = getMdv(originalEmit.PdbReader);
+                Output.WriteLine($@"
+Expected IL:
+{originalMdv}
+");
 
+                var rebuildMdv = getMdv(rebuildEmit.PdbReader);
+                Output.WriteLine($@"
+Actual IL:
+{originalMdv}
+");
                 // At this point the bytes were not equal, so the MDV output should also not be equal.
                 Assert.NotEqual(originalMdv, rebuildMdv);
 
-                // https://github.com/dotnet/roslyn/issues/52327
-                // this is not all that useful without manual copy/pasting. Can we diff this during the test and show the differences?
+                var diff = DiffUtil.DiffReport(originalMdv, rebuildMdv);
                 Assert.True(false, $@"
-Expected:
-{originalMdv}
-
-Actual:
-{rebuildMdv}
+IL differences:
+{diff}
 ");
             }
 
             if (!originalEmit.PdbBytes.SequenceEqual(rebuildEmit.PdbBytes))
             {
                 var originalMdv = getMdv(originalEmit.PdbReader);
-                var rebuildMdv = getMdv(rebuildEmit.PdbReader);
-
-                Assert.True(false, $@"
-Expected:
+                Output.WriteLine($@"
+Expected PDB:
 {originalMdv}
+");
 
-Actual:
-{rebuildMdv}
+                var rebuildMdv = getMdv(rebuildEmit.PdbReader);
+                Output.WriteLine($@"
+Actual PDB:
+{originalMdv}
+");
+                // At this point the bytes were not equal, so the MDV output should also not be equal.
+                Assert.NotEqual(originalMdv, rebuildMdv);
+
+                var diff = DiffUtil.DiffReport(originalMdv, rebuildMdv);
+                Assert.True(false, $@"
+PDB differences:
+{diff}
 ");
             }
 
@@ -235,7 +258,7 @@ Actual:
 
 #pragma warning disable 612 // 'CompilationOptions.Features' is obsolete
 
-        public static void VerifyCompilationOptions(CompilationOptions originalOptions, CompilationOptions rebuildOptions)
+        protected void VerifyCompilationOptions(CompilationOptions originalOptions, CompilationOptions rebuildOptions)
         {
             var type = originalOptions.GetType();
             foreach (var propertyInfo in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
@@ -275,7 +298,7 @@ Actual:
         }
 #pragma warning restore 612
 
-        private static void VerifyParseOptions(ParseOptions originalOptions, ParseOptions rebuildOptions)
+        private void VerifyParseOptions(ParseOptions originalOptions, ParseOptions rebuildOptions)
         {
             var type = originalOptions.GetType();
             foreach (var propertyInfo in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))

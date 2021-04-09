@@ -17,7 +17,7 @@ using Xunit.Abstractions;
 
 namespace Microsoft.CodeAnalysis.Rebuild.UnitTests
 {
-    public sealed partial class RebuildCommandLineTests : CSharpTestBase
+    public sealed partial class RebuildCommandLineTests : RebuildTestBase
     {
         private record CommandInfo(string CommandLine, string PeFileName, string? PdbFileName, string? CommandLineSuffix = null);
 
@@ -29,12 +29,11 @@ namespace Microsoft.CodeAnalysis.Rebuild.UnitTests
 
         internal static BuildPaths StandardBuildPaths => new BuildPaths(ClientDirectory, WorkingDirectory, SdkDirectory, tempDir: null);
 
-        public ITestOutputHelper TestOutputHelper { get; }
         public Dictionary<string, TestableFile> FilePathToStreamMap { get; } = new Dictionary<string, TestableFile>(StringComparer.OrdinalIgnoreCase);
 
-        public RebuildCommandLineTests(ITestOutputHelper testOutputHelper)
+        public RebuildCommandLineTests(ITestOutputHelper output)
+            : base(output)
         {
-            TestOutputHelper = testOutputHelper;
         }
 
         private void AddSourceFile(string filePath, string content)
@@ -100,7 +99,7 @@ namespace Microsoft.CodeAnalysis.Rebuild.UnitTests
             using var writer = new StringWriter();
             commonCompiler.FileSystem = TestableFileSystem.CreateForMap(FilePathToStreamMap);
             var result = commonCompiler.Run(writer, cancellationToken);
-            TestOutputHelper.WriteLine(writer.ToString());
+            Output.WriteLine(writer.ToString());
             Assert.Equal(0, result);
 
             var peStream = FilePathToStreamMap[peFilePath].GetStream();
@@ -113,9 +112,9 @@ namespace Microsoft.CodeAnalysis.Rebuild.UnitTests
                 analyzerConfigOptions: default,
                 globalConfigOptions: default);
             AssertEx.NotNull(compilation);
-            RoundTripUtil.VerifyCompilationOptions(commonCompiler.Arguments.CompilationOptions, compilation.Options);
+            VerifyCompilationOptions(commonCompiler.Arguments.CompilationOptions, compilation.Options);
 
-            RoundTripUtil.VerifyRoundTrip(
+            VerifyRoundTrip(
                 peStream,
                 pdbStream,
                 Path.GetFileName(peFilePath),
@@ -272,7 +271,7 @@ class Library
         [MemberData(nameof(GetCSharpData))]
         public void CSharp(string commandLine, string peFilePath, string? pdbFilePath, string? commandLineSuffix)
         {
-            TestOutputHelper.WriteLine($"Command Line: {commandLine}");
+            Output.WriteLine($"Command Line: {commandLine}");
             AddCSharpSourceFiles();
             var args = new List<string>(commandLine.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
             args.Add("/nostdlib");
@@ -296,7 +295,7 @@ class Library
                 args.AddRange(commandLineSuffix.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
             }
 
-            TestOutputHelper.WriteLine($"Final Line: {string.Join(" ", args)}");
+            Output.WriteLine($"Final Line: {string.Join(" ", args)}");
             var compiler = new CSharpRebuildCompiler(args.ToArray());
             VerifyRoundTrip(compiler, peFilePath, pdbFilePath);
         }
@@ -397,7 +396,7 @@ End Module
         [MemberData(nameof(GetVisualBasicData))]
         public void VisualBasic(string commandLine, string peFilePath, string? pdbFilePath)
         {
-            TestOutputHelper.WriteLine($"Command Line: {commandLine}");
+            Output.WriteLine($"Command Line: {commandLine}");
             AddVisualBasicSourceFiles();
             var args = new List<string>(commandLine.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
             args.Add("/nostdlib");
@@ -421,7 +420,7 @@ End Module
                 args.Add($"/pdb:{pdbFilePath}");
             }
 
-            TestOutputHelper.WriteLine($"Final Line: {string.Join(" ", args)}");
+            Output.WriteLine($"Final Line: {string.Join(" ", args)}");
             var compiler = new VisualBasicRebuildCompiler(args.ToArray());
             VerifyRoundTrip(compiler, peFilePath, pdbFilePath);
         }

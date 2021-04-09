@@ -27,14 +27,6 @@ using Roslyn.Utilities;
 
 namespace BuildValidator
 {
-    internal enum RebuildResult
-    {
-        Success,
-        MissingReferences,
-        CompilationError,
-        BinaryDifference,
-        MiscError
-    }
 
     internal sealed class CompilationDiff
     {

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Threading;
 using Microsoft.CodeAnalysis;
@@ -153,6 +154,102 @@ namespace Microsoft.CodeAnalysis.Rebuild
                 }
 
                 return null;
+            }
+        }
+
+        public RebuildResult Verify(Compilation rebuildCompilation, CancellationToken cancellationToken)
+        {
+            var peStream = new MemoryStream();
+            var pdbStream = OptionsReader.HasEmbeddedPdb ? null : new MemoryStream();
+
+            var emitResult = Emit(peStream, pdbStream, rebuildCompilation, cancellationToken);
+            if (!emitResult.Success)
+            {
+                return RebuildResult.CompilationError(emitResult.Diagnostics);
+            }
+
+            var originalPeBytes = OptionsReader.PeReader.GetMetadata().GetContent();
+            var rebuildPeBytes = peStream.ToImmutable();
+            if (originalPeBytes.Equals(rebuildPeBytes))
+            {
+                return RebuildResult.Success();
+            }
+
+            var rebuildPeReader = new PEReader(rebuildPeBytes);
+            var rebuildPdbReader = pdbStream is object
+                ? MetadataReaderProvider.FromPortablePdbImage(pdbStream.ToImmutable()).GetMetadataReader()
+                : new PEReader(rebuildPeBytes).GetEmbeddedPdbMetadataReader() ?? throw new InvalidOperationException();
+
+            return RebuildResult.BinaryDifference(
+                OptionsReader.PeReader,
+                OptionsReader.PdbReader,
+                rebuildPeReader,
+                rebuildPdbReader);
+        }
+
+        public static unsafe CompilationDiff Create(
+            AssemblyInfo assemblyInfo,
+            CompilationFactory compilationFactory,
+            ImmutableArray<SyntaxTree> syntaxTrees,
+            ImmutableArray<MetadataReference> metadataReferences,
+            ILogger logger)
+        {
+            using var rebuildPeStream = new MemoryStream();
+            var hasEmbeddedPdb = compilationFactory.OptionsReader.HasEmbeddedPdb;
+            var rebuildPdbStream = hasEmbeddedPdb ? null : new MemoryStream();
+            var rebuildCompilation = compilationFactory.CreateCompilation(syntaxTrees, metadataReferences);
+            var emitResult = compilationFactory.Emit(
+                rebuildPeStream,
+                rebuildPdbStream,
+                rebuildCompilation,
+                CancellationToken.None);
+
+            if (!emitResult.Success)
+            {
+                using var diagsScope = logger.BeginScope($"Diagnostics");
+                foreach (var diag in emitResult.Diagnostics)
+                {
+                    logger.LogError(diag.ToString());
+                }
+
+                return new CompilationDiff(
+                    assemblyInfo,
+                    RebuildResult.CompilationError,
+                    diagnostics: emitResult.Diagnostics);
+            }
+            else
+            {
+                var originalBytes = File.ReadAllBytes(assemblyInfo.FilePath);
+                var rebuildBytes = rebuildPeStream.ToArray();
+                if (originalBytes.SequenceEqual(rebuildBytes))
+                {
+                    return new CompilationDiff(assemblyInfo, RebuildResult.Success);
+                }
+                else
+                {
+                    return new CompilationDiff(
+                        assemblyInfo,
+                        RebuildResult.BinaryDifference,
+                        originalPortableExecutableBytes: originalBytes,
+                        originalPdbReader: compilationFactory.OptionsReader.PdbReader,
+                        rebuildPortableExecutableBytes: rebuildBytes,
+                        rebuildPdbReader: getRebuildPdbReader(),
+                        rebuildCompilation: rebuildCompilation);
+                }
+
+                MetadataReader getRebuildPdbReader()
+                {
+                    if (hasEmbeddedPdb)
+                    {
+                        var peReader = new PEReader(rebuildBytes.ToImmutableArray());
+                        return peReader.GetEmbeddedPdbMetadataReader() ?? throw ExceptionUtilities.Unreachable;
+                    }
+                    else
+                    {
+                        rebuildPdbStream!.Position = 0;
+                        return MetadataReaderProvider.FromPortablePdbStream(rebuildPdbStream).GetMetadataReader();
+                    }
+                }
             }
         }
 

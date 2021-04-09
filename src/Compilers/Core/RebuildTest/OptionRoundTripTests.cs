@@ -19,11 +19,17 @@ using Microsoft.CodeAnalysis.Test.Utilities;
 using Microsoft.CodeAnalysis.VisualBasic;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Microsoft.CodeAnalysis.Rebuild.UnitTests
 {
-    public class OptionRoundTripTests : CSharpTestBase
+    public class OptionRoundTripTests : RebuildTestBase
     {
+        public OptionRoundTripTests(ITestOutputHelper output)
+            : base(output)
+        {
+        }
+
         public static readonly CSharpCompilationOptions BaseCSharpCompilationOptions = TestOptions.DebugExe.WithDeterministic(true);
 
         public static readonly VisualBasicCompilationOptions BaseVisualBasicCompilationOptions = new VisualBasicCompilationOptions(
@@ -41,7 +47,7 @@ namespace Microsoft.CodeAnalysis.Rebuild.UnitTests
                 options: BaseCSharpCompilationOptions.WithPlatform(platform),
                 sourceFileName: "test.cs");
 
-            RoundTripUtil.VerifyRoundTrip(original);
+            VerifyRoundTrip(original);
         }
 
         [Theory]
@@ -59,7 +65,7 @@ End Class",
                 assemblyName: "test",
                 sourceFileName: "test.vb");
 
-            RoundTripUtil.VerifyRoundTrip(original);
+            VerifyRoundTrip(original);
         }
 
         [Theory]
@@ -80,7 +86,7 @@ End Class",
                 options: BaseCSharpCompilationOptions,
                 sourceFileName: "test.cs");
 
-            RoundTripUtil.VerifyRoundTrip(original, new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb, pdbFilePath: "test.pdb"));
+            VerifyRoundTrip(original, new EmitOptions(debugInformationFormat: DebugInformationFormat.PortablePdb, pdbFilePath: "test.pdb"));
         }
     }
 }
