@@ -5836,5 +5836,37 @@ public class C
             var comp = CSharpTestBase.CreateCompilation(source);
             comp.VerifyEmitDiagnostics();
         }
+
+        [Fact, WorkItem(52639, "https://github.com/dotnet/roslyn/issues/52639")]
+        public void Repro_52639()
+        {
+            var source = @"
+using System.Threading.Tasks;
+
+class C
+{
+    string F;
+
+    async Task<C> Test(C c)
+    {
+        c.F = await Task.FromResult(""a"");
+
+        switch (c)
+        {
+            case C c1:
+                await Task.FromResult(1);
+                return c1;
+        }
+
+        return null;
+    }
+}
+";
+            // var verifier = CompileAndVerify(source, options: TestOptions.DebugDll);
+            // verifier.VerifyDiagnostics();
+
+            var verifier = CompileAndVerify(source, options: TestOptions.ReleaseDll);
+            verifier.VerifyDiagnostics();
+        }
     }
 }
