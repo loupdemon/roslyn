@@ -3621,7 +3621,6 @@ namespace Microsoft.CodeAnalysis.CSharp
         protected override void VisitBinaryOperatorChildren(ArrayBuilder<BoundBinaryOperator> stack)
         {
             var binary = stack.Pop();
-
             var (leftOperand, leftConversion) = RemoveConversion(binary.Left, includeExplicitConversions: false);
 
             // Only the leftmost operator of a left-associative binary operator chain can learn from a conditional access on the left
@@ -3630,7 +3629,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             // but `expr == a?.b(out x) == true` has a conditional access on the right of the operator
             if (VisitPossibleConditionalAccess(leftOperand, out var conditionalStateWhenNotNull)
                 && CanPropagateStateWhenNotNull(leftConversion)
-                && canLearnFromOperator(binary))
+                && isEqualsOrNotEquals(binary))
             {
                 Debug.Assert(!IsConditionalState);
                 var leftType = ResultType;
@@ -3638,29 +3637,16 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var rightResult = VisitRvalueWithState(rightOperand);
                 ReinferBinaryOperatorAndSetResult(binary, leftOperand, leftConversion, leftType, rightOperand, rightConversion);
 
-                if (isKnownNullOrNotNull(binary.Right, rightResult))
+                if (isKnownNullOrNotNull(rightOperand, rightResult))
                 {
-                    LocalState leftStateWhenNotNull;
-                    if (!conditionalStateWhenNotNull.IsConditionalState)
-                    {
-                        leftStateWhenNotNull = conditionalStateWhenNotNull.State;
-                    }
-                    else if (binary.Right.ConstantValue is { IsBoolean: true, BooleanValue: var boolValue })
-                    {
-                        leftStateWhenNotNull = boolValue ? conditionalStateWhenNotNull.StateWhenTrue : conditionalStateWhenNotNull.StateWhenFalse;
-                    }
-                    else
-                    {
-                        leftStateWhenNotNull = conditionalStateWhenNotNull.StateWhenTrue;
-                        Join(ref leftStateWhenNotNull, ref conditionalStateWhenNotNull.StateWhenFalse);
-                    }
+                    var stateWhenNotNull = getSingleState(binary, rightOperand, conditionalStateWhenNotNull);
 
-                    Meet(ref leftStateWhenNotNull, ref State);
+                    Meet(ref stateWhenNotNull, ref State);
 
-                    var isNullConstant = binary.Right.ConstantValue?.IsNull == true;
+                    var isNullConstant = rightOperand.ConstantValue?.IsNull == true;
                     SetConditionalState(isNullConstant == isEquals(binary)
-                        ? (State, leftStateWhenNotNull)
-                        : (leftStateWhenNotNull, State));
+                        ? (State, stateWhenNotNull)
+                        : (stateWhenNotNull, State));
                 }
 
                 if (stack.Count == 0)
@@ -3675,8 +3661,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             while (true)
             {
-                if (!canLearnFromOperator(binary)
-                    || !learnFromOperator(binary))
+                if (!learnFromConditionalAccessOrBoolConstant(binary))
                 {
                     Unsplit(); // VisitRvalue does this
                     UseRvalueOnly(binary.Left); // drop lvalue part
@@ -3694,10 +3679,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                 binary = stack.Pop();
             }
 
-            static bool canLearnFromOperator(BoundBinaryOperator binary)
-            {
-                return binary.OperatorKind.Operator() is BinaryOperatorKind.Equal or BinaryOperatorKind.NotEqual;
-            }
+            static bool isEqualsOrNotEquals(BoundBinaryOperator binary)
+                => binary.OperatorKind.Operator() is BinaryOperatorKind.Equal or BinaryOperatorKind.NotEqual;
+            
 
             static bool isEquals(BoundBinaryOperator binary)
                 => binary.OperatorKind.Operator() == BinaryOperatorKind.Equal;
@@ -3707,43 +3691,58 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return resultType.State.IsNotNull()
                     || expr.ConstantValue is object;
             }
+            
+            LocalState getSingleState(BoundBinaryOperator binary, BoundExpression nonNullOperand, PossiblyConditionalState conditionalStateWhenNotNull)
+            {
+                LocalState stateWhenNotNull;
+                if (!conditionalStateWhenNotNull.IsConditionalState)
+                {
+                    stateWhenNotNull = conditionalStateWhenNotNull.State;
+                }
+                else if (isEquals(binary) && nonNullOperand.ConstantValue is { IsBoolean: true, BooleanValue: var boolValue })
+                {
+                    // can preserve conditional state from `.TryGetValue` in `dict?.TryGetValue(key, out value) == true`,
+                    // but not in `dict?.TryGetValue(key, out value) != false`
+                    stateWhenNotNull = boolValue ? conditionalStateWhenNotNull.StateWhenTrue : conditionalStateWhenNotNull.StateWhenFalse;
+                }
+                else
+                {
+                    stateWhenNotNull = conditionalStateWhenNotNull.StateWhenTrue;
+                    Join(ref stateWhenNotNull, ref conditionalStateWhenNotNull.StateWhenFalse);
+                }
+                return stateWhenNotNull;
+            }
 
             // Returns true if `binary.Right` was visited by the call.
-            bool learnFromOperator(BoundBinaryOperator binary)
+            bool learnFromConditionalAccessOrBoolConstant(BoundBinaryOperator binary)
             {
+                if (!isEqualsOrNotEquals(binary))
+                {
+                    return false;
+                }
+
                 var leftResult = ResultType;
                 var (rightOperand, rightConversion) = RemoveConversion(binary.Right, includeExplicitConversions: false);
-                // `true == (a?.b(out x))`
+                // `true == a?.b(out x)`
                 if (isKnownNullOrNotNull(binary.Left, leftResult)
                     && CanPropagateStateWhenNotNull(rightConversion)
                     && TryVisitConditionalAccess(rightOperand, out var conditionalStateWhenNotNull))
                 {
                     ReinferBinaryOperatorAndSetResult(binary, leftOperand, leftConversion, leftResult, rightOperand, rightConversion);
 
-                    LocalState stateWhenNotNull;
-                    if (!conditionalStateWhenNotNull.IsConditionalState)
-                    {
-                        stateWhenNotNull = conditionalStateWhenNotNull.State;
-                    }
-                    else if (rightOperand.ConstantValue is { IsBoolean: true, BooleanValue: var boolValue })
-                    {
-                        stateWhenNotNull = boolValue ? conditionalStateWhenNotNull.StateWhenTrue : conditionalStateWhenNotNull.StateWhenFalse;
-                    }
-                    else
-                    {
-                        // e.g. `dict?.TryGetValue(key, out value) == GetBool()`
-                        // `value` has conditional state after `.TryGetValue` which is lost
-                        // because our comparison operand is not a bool constant
-                        stateWhenNotNull = conditionalStateWhenNotNull.StateWhenTrue;
-                        Join(ref stateWhenNotNull, ref conditionalStateWhenNotNull.StateWhenFalse);
-                    }
-
-                    var isNullConstant = binary.Left.ConstantValue?.IsNull == true;
+                    var stateWhenNotNull = getSingleState(binary, leftOperand, conditionalStateWhenNotNull);
+                    var isNullConstant = leftOperand.ConstantValue?.IsNull == true;
                     SetConditionalState(isNullConstant == isEquals(binary)
                         ? (State, stateWhenNotNull)
                         : (stateWhenNotNull, State));
 
                     return true;
+                }
+
+                // can only learn from a bool constant operand if it's using the built in `bool operator ==(bool left, bool right)`
+                if (binary.OperatorKind.IsUserDefined())
+                {
+                    return false;
                 }
 
                 // `(x != null) == true`
@@ -3778,16 +3777,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 SetResult(binary, TypeWithState.ForType(binary.Type), TypeWithAnnotations.Create(binary.Type));
                 return true;
             }
-        }
-
-        private void AfterLeftChildHasBeenVisited(BoundExpression leftOperand, Conversion leftConversion, BoundBinaryOperator binary)
-        {
-            Debug.Assert(!IsConditionalState);
-            TypeWithState leftType = ResultType;
-
-            var (rightOperand, rightConversion) = RemoveConversion(binary.Right, includeExplicitConversions: false);
-            VisitRvalue(rightOperand);
-            AfterRightChildHasBeenVisited(binary, leftOperand, leftConversion, leftType, rightOperand, rightConversion);
         }
 
         private void ReinferBinaryOperatorAndSetResult(
@@ -3908,15 +3897,17 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        // PROTOTYPE(ida): we avoid moving this do reduce the diff for now, but it feels like we should move this.
-        private void AfterRightChildHasBeenVisited(
-            BoundBinaryOperator binary,
+        private void AfterLeftChildHasBeenVisited(
             BoundExpression leftOperand,
             Conversion leftConversion,
-            TypeWithState leftType,
-            BoundExpression rightOperand,
-            Conversion rightConversion)
+            BoundBinaryOperator binary)
         {
+            Debug.Assert(!IsConditionalState);
+            var leftType = ResultType;
+
+            var (rightOperand, rightConversion) = RemoveConversion(binary.Right, includeExplicitConversions: false);
+            VisitRvalue(rightOperand);
+
             var rightType = ResultType;
             ReinferBinaryOperatorAndSetResult(binary, leftOperand, leftConversion, leftType, rightOperand, rightConversion);
 
