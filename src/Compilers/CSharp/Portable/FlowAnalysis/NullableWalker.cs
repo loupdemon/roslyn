@@ -3636,10 +3636,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var leftType = ResultType;
                 var (rightOperand, rightConversion) = RemoveConversion(binary.Right, includeExplicitConversions: false);
                 var rightResult = VisitRvalueWithState(rightOperand);
-                // PROTOTYPE: we really should refactor with a more fine grained approach. it looks like this learns from the null tests all over again.
-                // could we just push these tests and visits into AfterLeftChildHasBeenVisited?
-                AfterRightChildHasBeenVisited(binary, leftOperand, leftConversion, leftType, rightOperand, rightConversion);
-                Unsplit();
+                ReinferBinaryOperatorAndSetResult(binary, leftOperand, leftConversion, leftType, rightOperand, rightConversion);
 
                 if (isKnownNullOrNotNull(binary.Right, rightResult))
                 {
@@ -3721,10 +3718,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     && CanPropagateStateWhenNotNull(rightConversion)
                     && TryVisitConditionalAccess(rightOperand, out var conditionalStateWhenNotNull))
                 {
-                    AfterRightChildHasBeenVisited(binary, leftOperand, leftConversion, leftResult, rightOperand, rightConversion);
-                    Unsplit();
-                    // PROTOTYPE: it seems like we should extract out the specific bits around
-                    // the operand conversions and somehow consolidate the handling of null tests
+                    ReinferBinaryOperatorAndSetResult(binary, leftOperand, leftConversion, leftResult, rightOperand, rightConversion);
 
                     LocalState stateWhenNotNull;
                     if (!conditionalStateWhenNotNull.IsConditionalState)
@@ -3738,7 +3732,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     else
                     {
                         // e.g. `dict?.TryGetValue(key, out value) == GetBool()`
-                        // `value` has conditional state after .TryGetValue which is lost
+                        // `value` has conditional state after `.TryGetValue` which is lost
                         // because our comparison operand is not a bool constant
                         stateWhenNotNull = conditionalStateWhenNotNull.StateWhenTrue;
                         Join(ref stateWhenNotNull, ref conditionalStateWhenNotNull.StateWhenFalse);
@@ -3796,7 +3790,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             AfterRightChildHasBeenVisited(binary, leftOperand, leftConversion, leftType, rightOperand, rightConversion);
         }
 
-        private void AfterRightChildHasBeenVisited(
+        private void ReinferBinaryOperatorAndSetResult(
             BoundBinaryOperator binary,
             BoundExpression leftOperand,
             Conversion leftConversion,
@@ -3897,6 +3891,35 @@ namespace Microsoft.CodeAnalysis.CSharp
             var inferredResult = InferResultNullability(binary.OperatorKind, method, binary.Type, leftType, rightType);
             SetResult(binary, inferredResult, inferredResult.ToTypeWithAnnotations(compilation));
 
+            TypeSymbol? getTypeIfContainingType(TypeSymbol baseType, TypeSymbol? derivedType)
+            {
+                if (derivedType is null)
+                {
+                    return null;
+                }
+                derivedType = derivedType.StrippedType();
+                var discardedUseSiteInfo = CompoundUseSiteInfo<AssemblySymbol>.Discarded;
+                var conversion = _conversions.ClassifyBuiltInConversion(derivedType, baseType, ref discardedUseSiteInfo);
+                if (conversion.Exists && !conversion.IsExplicit)
+                {
+                    return derivedType;
+                }
+                return null;
+            }
+        }
+
+        // PROTOTYPE(ida): we avoid moving this do reduce the diff for now, but it feels like we should move this.
+        private void AfterRightChildHasBeenVisited(
+            BoundBinaryOperator binary,
+            BoundExpression leftOperand,
+            Conversion leftConversion,
+            TypeWithState leftType,
+            BoundExpression rightOperand,
+            Conversion rightConversion)
+        {
+            var rightType = ResultType;
+            ReinferBinaryOperatorAndSetResult(binary, leftOperand, leftConversion, leftType, rightOperand, rightConversion);
+
             BinaryOperatorKind op = binary.OperatorKind.Operator();
 
             if (op == BinaryOperatorKind.Equal || op == BinaryOperatorKind.NotEqual)
@@ -3965,22 +3988,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                     MarkSlotsAsNotNull(slotBuilder, ref stateToUpdate);
                 }
                 slotBuilder.Free();
-            }
-
-            TypeSymbol? getTypeIfContainingType(TypeSymbol baseType, TypeSymbol? derivedType)
-            {
-                if (derivedType is null)
-                {
-                    return null;
-                }
-                derivedType = derivedType.StrippedType();
-                var discardedUseSiteInfo = CompoundUseSiteInfo<AssemblySymbol>.Discarded;
-                var conversion = _conversions.ClassifyBuiltInConversion(derivedType, baseType, ref discardedUseSiteInfo);
-                if (conversion.Exists && !conversion.IsExplicit)
-                {
-                    return derivedType;
-                }
-                return null;
             }
         }
 
