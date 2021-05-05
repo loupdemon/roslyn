@@ -3684,7 +3684,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     Unsplit(); // VisitRvalue does this
                     UseRvalueOnly(binary.Left); // drop lvalue part
 
-                    AfterLeftChildHasBeenVisited(binary, leftOperand, leftConversion);
+                    AfterLeftChildHasBeenVisited(leftOperand, leftConversion, binary);
                 }
 
                 if (stack.Count == 0)
@@ -3758,7 +3758,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var (stateWhenTrue, stateWhenFalse) = (StateWhenTrue.Clone(), StateWhenFalse.Clone());
                     Unsplit();
                     Visit(binary.Right);
-                    UseRvalueOnly(binary.Right);
+                    UseRvalueOnly(binary.Right); // record result for the right
                     SetConditionalState(isEquals(binary) == rightConstant.BooleanValue
                         ? (stateWhenTrue, stateWhenFalse)
                         : (stateWhenFalse, stateWhenTrue));
@@ -3786,14 +3786,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        // PROTOTYPE(ida): refactor once we have a better handle on all this
-        private void AfterLeftChildHasBeenVisited(BoundBinaryOperator binary, BoundExpression leftOperand, Conversion leftConversion)
+        private void AfterLeftChildHasBeenVisited(BoundExpression leftOperand, Conversion leftConversion, BoundBinaryOperator binary)
         {
             Debug.Assert(!IsConditionalState);
             TypeWithState leftType = ResultType;
 
             var (rightOperand, rightConversion) = RemoveConversion(binary.Right, includeExplicitConversions: false);
-            VisitRvalueWithState(rightOperand);
+            VisitRvalue(rightOperand);
             AfterRightChildHasBeenVisited(binary, leftOperand, leftConversion, leftType, rightOperand, rightConversion);
         }
 
@@ -4398,7 +4397,6 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             // in scenarios like `((X?)x) != null` we want to track that `x` is "not null when true"
             // therefore we unwrap certain operators before getting a receiver slot
-            // PROTOTYPE(ida): test `(a?.b)?.M() == true`
             var innerReceiver = node;
             while (innerReceiver is BoundConversion or BoundAsOperator)
             {
