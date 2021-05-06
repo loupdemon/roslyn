@@ -3634,21 +3634,37 @@ namespace Microsoft.CodeAnalysis.CSharp
                 Debug.Assert(!IsConditionalState);
                 var leftType = ResultType;
                 var (rightOperand, rightConversion) = RemoveConversion(binary.Right, includeExplicitConversions: false);
-                var rightResult = VisitRvalueWithState(rightOperand);
-                ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftType, rightOperand, rightConversion, binary);
+                var rightType = VisitRvalueWithState(rightOperand);
 
-                if (isKnownNullOrNotNull(rightOperand, rightResult))
+                if (isKnownNullOrNotNull(rightOperand, rightType))
                 {
                     var stateWhenNotNull = getSingleState(rightOperand, conditionalStateWhenNotNull);
 
-                    // PROTOTYPE(ida): With this solution, we may incorrectly retain not-null state when the right side assigns a null.
-                    // `a?.b(x = new object()) == c.d(x = null)`
-                    Meet(ref stateWhenNotNull, ref State);
+                    // Consider the following two scenarios:
+                    // `a?.b(x = new object()) == c.d(x = null)` // `x` is maybe-null after expression
+                    // `a?.b(x = null) == c.d(x = new object())` // `x` is not-null after expression
+
+                    // In order to properly integrate state changes from the RHS into the "state when not null", we can't simply Meet or Join the state.
+                    // Instead we have to start from the LHS's "state when not null" and visit the RHS again.
+                    // We visit without diagnostics, since we already got all the diagnostics for the "worst case scenario" from the original visit.
+                    var oldDisableDiagnostics = _disableDiagnostics;
+                    _disableDiagnostics = true;
+
+                    var stateAfterRight = this.State;
+                    SetState(stateWhenNotNull);
+                    VisitRvalue(rightOperand);
+
+                    _disableDiagnostics = oldDisableDiagnostics;
+                    ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftType, rightOperand, rightConversion, rightType, binary);
 
                     var isNullConstant = rightOperand.ConstantValue?.IsNull == true;
                     SetConditionalState(isNullConstant == isEquals(binary)
-                        ? (State, stateWhenNotNull)
-                        : (stateWhenNotNull, State));
+                        ? (stateAfterRight, State)
+                        : (State, stateAfterRight));
+                }
+                else
+                {
+                    ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftType, rightOperand, rightConversion, rightType, binary);
                 }
 
                 if (stack.Count == 0)
@@ -3729,7 +3745,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     && CanPropagateStateWhenNotNull(rightConversion)
                     && TryVisitConditionalAccess(rightOperand, out var conditionalStateWhenNotNull))
                 {
-                    ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftResult, rightOperand, rightConversion, binary);
+                    ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftResult, rightOperand, rightConversion, rightType: ResultType, binary);
 
                     var stateWhenNotNull = getSingleState(leftOperand, conditionalStateWhenNotNull);
                     var isNullConstant = leftOperand.ConstantValue?.IsNull == true;
@@ -3786,9 +3802,9 @@ namespace Microsoft.CodeAnalysis.CSharp
             TypeWithState leftType,
             BoundExpression rightOperand,
             Conversion rightConversion,
+            TypeWithState rightType,
             BoundBinaryOperator binary)
         {
-            var rightType = ResultType;
             Debug.Assert(!IsConditionalState);
             // At this point, State.Reachable may be false for
             // invalid code such as `s + throw new Exception()`.
@@ -3910,7 +3926,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             VisitRvalue(rightOperand);
 
             var rightType = ResultType;
-            ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftType, rightOperand, rightConversion, binary);
+            ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftType, rightOperand, rightConversion, rightType, binary);
 
             BinaryOperatorKind op = binary.OperatorKind.Operator();
 
