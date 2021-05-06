@@ -3678,7 +3678,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 if (!learnFromConditionalAccessOrBoolConstant())
                 {
                     Unsplit(); // VisitRvalue does this
-                    UseRvalueOnly(binary.Left); // drop lvalue part
+                    UseRvalueOnly(leftOperand); // drop lvalue part
 
                     AfterLeftChildHasBeenVisited(leftOperand, leftConversion, binary);
                 }
@@ -4403,8 +4403,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             Visit(node);
             stateWhenNotNull = PossiblyConditionalState.Create(this);
 
-            var (innerReceiver, _) = RemoveConversion(node, includeExplicitConversions: true);
-            var slot = MakeSlot(innerReceiver);
+            (node, _) = RemoveConversion(node, includeExplicitConversions: true);
+            var slot = MakeSlot(node);
             if (slot > -1)
             {
                 if (IsConditionalState)
