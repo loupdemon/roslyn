@@ -3634,37 +3634,33 @@ namespace Microsoft.CodeAnalysis.CSharp
                 Debug.Assert(!IsConditionalState);
                 var leftType = ResultType;
                 var (rightOperand, rightConversion) = RemoveConversion(binary.Right, includeExplicitConversions: false);
-                var rightType = VisitRvalueWithState(rightOperand);
 
+                // Consider the following two scenarios:
+                // `a?.b(x = new object()) == c.d(x = null)` // `x` is maybe-null after expression
+                // `a?.b(x = null) == c.d(x = new object())` // `x` is not-null after expression
+
+                // In order to properly integrate state changes from the RHS into the LHS's "state when not null", we can't simply Meet or Join the state.
+                // We have to visit it twice. Once without diagnostics using the LHS's "state when not null", and again with the "state when maybe null" for diagnostics and public API.
+                var oldDisableDiagnostics = _disableDiagnostics;
+                _disableDiagnostics = true;
+
+                var stateBeforeRight = this.State;
+                SetState(getSingleState(rightOperand, conditionalStateWhenNotNull));
+                VisitRvalue(rightOperand);
+                var stateWhenNotNull = this.State;
+
+                _disableDiagnostics = oldDisableDiagnostics;
+
+                // Now visit the right side for public API and diagnostics using the worst-case state from the LHS.
+                SetState(stateBeforeRight);
+                var rightType = VisitRvalueWithState(rightOperand);
+                ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftType, rightOperand, rightConversion, rightType, binary);
                 if (isKnownNullOrNotNull(rightOperand, rightType))
                 {
-                    var stateWhenNotNull = getSingleState(rightOperand, conditionalStateWhenNotNull);
-
-                    // Consider the following two scenarios:
-                    // `a?.b(x = new object()) == c.d(x = null)` // `x` is maybe-null after expression
-                    // `a?.b(x = null) == c.d(x = new object())` // `x` is not-null after expression
-
-                    // In order to properly integrate state changes from the RHS into the "state when not null", we can't simply Meet or Join the state.
-                    // Instead we have to start from the LHS's "state when not null" and visit the RHS again.
-                    // We visit without diagnostics, since we already got all the diagnostics for the "worst case scenario" from the original visit.
-                    var oldDisableDiagnostics = _disableDiagnostics;
-                    _disableDiagnostics = true;
-
-                    var stateAfterRight = this.State;
-                    SetState(stateWhenNotNull);
-                    VisitRvalue(rightOperand);
-
-                    _disableDiagnostics = oldDisableDiagnostics;
-                    ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftType, rightOperand, rightConversion, rightType, binary);
-
                     var isNullConstant = rightOperand.ConstantValue?.IsNull == true;
                     SetConditionalState(isNullConstant == isEquals(binary)
-                        ? (stateAfterRight, State)
-                        : (State, stateAfterRight));
-                }
-                else
-                {
-                    ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftType, rightOperand, rightConversion, rightType, binary);
+                        ? (State, stateWhenNotNull)
+                        : (stateWhenNotNull, State));
                 }
 
                 if (stack.Count == 0)
