@@ -2728,7 +2728,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             var method = conversion.Method;
-            Debug.Assert(method is not null);
+            if (method is null)
+            {
+                // This can happen when the user-defined conversion to use is ambiguous.
+                // For example in `SyntaxBinderTests.TestNullCoalesceWithInvalidUserDefinedConversions_03`
+                return false;
+            }
+
             Debug.Assert(method.ParameterCount is 1);
             var param = method.Parameters[0];
             return param.Type.IsNonNullableValueType();

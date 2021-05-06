@@ -3635,12 +3635,14 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var leftType = ResultType;
                 var (rightOperand, rightConversion) = RemoveConversion(binary.Right, includeExplicitConversions: false);
                 var rightResult = VisitRvalueWithState(rightOperand);
-                ReinferBinaryOperatorAndSetResult(binary, leftOperand, leftConversion, leftType, rightOperand, rightConversion);
+                ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftType, rightOperand, rightConversion, binary);
 
                 if (isKnownNullOrNotNull(rightOperand, rightResult))
                 {
-                    var stateWhenNotNull = getSingleState(binary, rightOperand, conditionalStateWhenNotNull);
+                    var stateWhenNotNull = getSingleState(rightOperand, conditionalStateWhenNotNull);
 
+                    // PROTOTYPE(ida): With this solution, we may incorrectly retain not-null state when the right side assigns a null.
+                    // `a?.b(x = new object()) == c.d(x = null)`
                     Meet(ref stateWhenNotNull, ref State);
 
                     var isNullConstant = rightOperand.ConstantValue?.IsNull == true;
@@ -3661,7 +3663,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             while (true)
             {
-                if (!learnFromConditionalAccessOrBoolConstant(binary))
+                if (!learnFromConditionalAccessOrBoolConstant())
                 {
                     Unsplit(); // VisitRvalue does this
                     UseRvalueOnly(binary.Left); // drop lvalue part
@@ -3681,7 +3683,6 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             static bool isEqualsOrNotEquals(BoundBinaryOperator binary)
                 => binary.OperatorKind.Operator() is BinaryOperatorKind.Equal or BinaryOperatorKind.NotEqual;
-            
 
             static bool isEquals(BoundBinaryOperator binary)
                 => binary.OperatorKind.Operator() == BinaryOperatorKind.Equal;
@@ -3691,15 +3692,15 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return resultType.State.IsNotNull()
                     || expr.ConstantValue is object;
             }
-            
-            LocalState getSingleState(BoundBinaryOperator binary, BoundExpression nonNullOperand, PossiblyConditionalState conditionalStateWhenNotNull)
+
+            LocalState getSingleState(BoundExpression otherOperand, PossiblyConditionalState conditionalStateWhenNotNull)
             {
                 LocalState stateWhenNotNull;
                 if (!conditionalStateWhenNotNull.IsConditionalState)
                 {
                     stateWhenNotNull = conditionalStateWhenNotNull.State;
                 }
-                else if (isEquals(binary) && nonNullOperand.ConstantValue is { IsBoolean: true, BooleanValue: var boolValue })
+                else if (isEquals(binary) && otherOperand.ConstantValue is { IsBoolean: true, BooleanValue: var boolValue })
                 {
                     // can preserve conditional state from `.TryGetValue` in `dict?.TryGetValue(key, out value) == true`,
                     // but not in `dict?.TryGetValue(key, out value) != false`
@@ -3714,7 +3715,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             // Returns true if `binary.Right` was visited by the call.
-            bool learnFromConditionalAccessOrBoolConstant(BoundBinaryOperator binary)
+            bool learnFromConditionalAccessOrBoolConstant()
             {
                 if (!isEqualsOrNotEquals(binary))
                 {
@@ -3724,13 +3725,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                 var leftResult = ResultType;
                 var (rightOperand, rightConversion) = RemoveConversion(binary.Right, includeExplicitConversions: false);
                 // `true == a?.b(out x)`
-                if (isKnownNullOrNotNull(binary.Left, leftResult)
+                if (isKnownNullOrNotNull(leftOperand, leftResult)
                     && CanPropagateStateWhenNotNull(rightConversion)
                     && TryVisitConditionalAccess(rightOperand, out var conditionalStateWhenNotNull))
                 {
-                    ReinferBinaryOperatorAndSetResult(binary, leftOperand, leftConversion, leftResult, rightOperand, rightConversion);
+                    ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftResult, rightOperand, rightConversion, binary);
 
-                    var stateWhenNotNull = getSingleState(binary, leftOperand, conditionalStateWhenNotNull);
+                    var stateWhenNotNull = getSingleState(leftOperand, conditionalStateWhenNotNull);
                     var isNullConstant = leftOperand.ConstantValue?.IsNull == true;
                     SetConditionalState(isNullConstant == isEquals(binary)
                         ? (State, stateWhenNotNull)
@@ -3780,12 +3781,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         }
 
         private void ReinferBinaryOperatorAndSetResult(
-            BoundBinaryOperator binary,
             BoundExpression leftOperand,
             Conversion leftConversion,
             TypeWithState leftType,
             BoundExpression rightOperand,
-            Conversion rightConversion)
+            Conversion rightConversion,
+            BoundBinaryOperator binary)
         {
             var rightType = ResultType;
             Debug.Assert(!IsConditionalState);
@@ -3909,7 +3910,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             VisitRvalue(rightOperand);
 
             var rightType = ResultType;
-            ReinferBinaryOperatorAndSetResult(binary, leftOperand, leftConversion, leftType, rightOperand, rightConversion);
+            ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftType, rightOperand, rightConversion, binary);
 
             BinaryOperatorKind op = binary.OperatorKind.Operator();
 
@@ -4338,9 +4339,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        // PROTOTYPE(improved-definite-assignment):
-        // this is not used outside 'VisitPossibleConditionalAccess' yet, but is expected to be used
-        // when refactoring 'VisitBinaryOperatorChildren'
         /// <summary>
         /// Visits a node only if it is a conditional access.
         /// Returns 'true' if and only if the node was visited.
@@ -4393,34 +4391,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             Visit(node);
             stateWhenNotNull = PossiblyConditionalState.Create(this);
 
-            // in scenarios like `((X?)x) != null` we want to track that `x` is "not null when true"
-            // therefore we unwrap certain operators before getting a receiver slot
-            var innerReceiver = node;
-            while (innerReceiver is BoundConversion or BoundAsOperator)
-            {
-                if (innerReceiver is BoundAsOperator asOperator)
-                {
-                    innerReceiver = asOperator.Operand;
-                }
-                else if (innerReceiver is BoundConversion conv)
-                {
-                    if (CanPropagateStateWhenNotNull(conv.Conversion))
-                    {
-                        innerReceiver = conv.Operand;
-                    }
-                    else
-                    {
-                        // PROTOTYPE(ida): test scenarios where the receiver conversion affects
-                        // whether we learn about the non-nullability of the receiver
-                        // e.g. `public static implicit operator X(object? obj) => new X();`
-                        break;
-                    }
-                }
-                else
-                {
-                    throw ExceptionUtilities.UnexpectedValue(innerReceiver.Kind);
-                }
-            }
+            var (innerReceiver, _) = RemoveConversion(node, includeExplicitConversions: true);
             var slot = MakeSlot(innerReceiver);
             if (slot > -1)
             {
