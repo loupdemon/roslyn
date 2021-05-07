@@ -844,16 +844,90 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(!IsConditionalState);
             LearnFromAnyNullPatterns(node.Expression, node.Pattern);
             VisitPatternForRewriting(node.Pattern);
-            Visit(node.Expression);
-            var expressionState = ResultType;
-            var state = PossiblyConditionalState.Create(this);
-            var labelStateMap = LearnFromDecisionDag(node.Syntax, node.DecisionDag, node.Expression, expressionState, ref state);
-            var trueState = labelStateMap.TryGetValue(node.IsNegated ? node.WhenFalseLabel : node.WhenTrueLabel, out var s1) ? s1.state : UnreachableState();
-            var falseState = labelStateMap.TryGetValue(node.IsNegated ? node.WhenTrueLabel : node.WhenFalseLabel, out var s2) ? s2.state : UnreachableState();
-            labelStateMap.Free();
-            SetConditionalState(trueState, falseState);
+            if (VisitPossibleConditionalAccess(node.Expression, out var conditionalStateWhenNotNull))
+            {
+                Debug.Assert(!IsConditionalState);
+                switch (isTopLevelNonNullTest(node.Pattern))
+                {
+                    case true:
+                        SetConditionalState(getSingleState(node.Pattern, conditionalStateWhenNotNull), State);
+                        break;
+                    case false:
+                        SetConditionalState(State, getSingleState(node.Pattern, conditionalStateWhenNotNull));
+                        break;
+                }
+            }
+            else
+            {
+                var expressionState = ResultType;
+                var state = PossiblyConditionalState.Create(this);
+                var labelStateMap = LearnFromDecisionDag(node.Syntax, node.DecisionDag, node.Expression, expressionState, ref state);
+                var trueState = labelStateMap.TryGetValue(node.IsNegated ? node.WhenFalseLabel : node.WhenTrueLabel, out var s1) ? s1.state : UnreachableState();
+                var falseState = labelStateMap.TryGetValue(node.IsNegated ? node.WhenTrueLabel : node.WhenFalseLabel, out var s2) ? s2.state : UnreachableState();
+                labelStateMap.Free();
+                SetConditionalState(trueState, falseState);
+            }
             SetNotNullResult(node);
             return null;
+
+            LocalState getSingleState(BoundPattern pattern, PossiblyConditionalState conditionalState)
+            {
+                if (!conditionalState.IsConditionalState)
+                {
+                    return conditionalState.State;
+                }
+                else if (isBoolTest(pattern) is bool b)
+                {
+                    return b ? conditionalState.StateWhenTrue : conditionalState.StateWhenFalse;
+                }
+                else
+                {
+                    var state = conditionalState.StateWhenTrue;
+                    Join(ref state, ref conditionalState.StateWhenFalse);
+                    return state;
+                }
+            }
+
+            // Returns `true` if the pattern only matches a `true` input.
+            // Returns `false` if the pattern only matches a `false` input.
+            // Otherwise, returns `null`.
+            static bool? isBoolTest(BoundPattern pattern)
+            {
+                // FIXME: we're testing against nullabel bools so handle negation propertly
+                switch (pattern)
+                {
+                    case BoundConstantPattern { ConstantValue: { IsBoolean: true, BooleanValue: var boolValue } }:
+                        return boolValue;
+                    case BoundNegatedPattern negated:
+                        return !isBoolTest(negated.Negated);
+                    case BoundBinaryPattern binary:
+                        if (binary.Disjunction)
+                        {
+                            // `(a != null && a.b(out x)) is true or true` matches `true`
+                            // `(a != null && a.b(out x)) is true or false` matches any boolean
+                            // both subpatterns must have the same bool test for the test to propagate out
+                            var leftNullTest = isBoolTest(binary.Left);
+                            return leftNullTest is null ? null :
+                                leftNullTest != isBoolTest(binary.Right) ? null :
+                                leftNullTest;
+                        }
+
+                        // `(a != null && a.b(out x)) is true and true` matches `true`
+                        // `(a != null && a.b(out x)) is true and var x` matches `true`
+                        // `(a != null && a.b(out x)) is true and false` never matches and is a compile error
+                        return isBoolTest(binary.Left) ?? isBoolTest(binary.Right);
+                    case BoundConstantPattern { ConstantValue: { IsBoolean: false } }:
+                    case BoundDiscardPattern:
+                    case BoundTypePattern:
+                    case BoundRecursivePattern:
+                    case BoundITuplePattern:
+                    case BoundRelationalPattern:
+                    case BoundDeclarationPattern:
+                        return null;
+                    default:
+                        throw ExceptionUtilities.UnexpectedValue(pattern.Kind);
+                }
+            }
         }
     }
 }

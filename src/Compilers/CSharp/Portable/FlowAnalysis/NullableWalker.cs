@@ -9328,11 +9328,23 @@ namespace Microsoft.CodeAnalysis.CSharp
             var operand = node.Operand;
             var typeExpr = node.TargetType;
 
-            VisitRvalue(operand);
+            VisitPossibleConditionalAccess(operand, out var conditionalStateWhenNotNull);
+            Unsplit();
+
+            LocalState stateWhenNotNull;
+            if (!conditionalStateWhenNotNull.IsConditionalState)
+            {
+                stateWhenNotNull = conditionalStateWhenNotNull.State;
+            }
+            else
+            {
+                stateWhenNotNull = conditionalStateWhenNotNull.StateWhenTrue;
+                Join(ref stateWhenNotNull, ref conditionalStateWhenNotNull.StateWhenFalse);
+            }
+
             Debug.Assert(node.Type.SpecialType == SpecialType.System_Boolean);
 
-            Split();
-            LearnFromNonNullTest(operand, ref StateWhenTrue);
+            SetConditionalState(stateWhenNotNull, State);
             if (typeExpr.Type?.SpecialType == SpecialType.System_Object)
             {
                 LearnFromNullTest(operand, ref StateWhenFalse);
