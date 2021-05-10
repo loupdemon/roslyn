@@ -4455,7 +4455,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // In the other branch, the receiver is known to be non-null.
                     LearnFromNullTest(receiver, ref savedState);
                     makeAndAdjustReceiverSlot(receiver);
-                    SetState(stateWhenNotNull);
+                    SetPossiblyConditionalState(stateWhenNotNull);
                 }
 
                 // We want to preserve stateWhenNotNull from accesses in the same "chain":
@@ -4588,22 +4588,16 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             (var consequence, var consequenceConversion, consequenceRValue) = visitConditionalOperand(consequenceState, originalConsequence);
             var consequenceConditionalState = PossiblyConditionalState.Create(this);
-            Unsplit();
-            consequenceState = this.State.Clone();
+            consequenceState = CloneAndUnsplit(ref consequenceConditionalState);
             var consequenceEndReachable = consequenceState.Reachable;
 
             (var alternative, var alternativeConversion, alternativeRValue) = visitConditionalOperand(alternativeState, originalAlternative);
-            if (IsConditionalState)
-            {
-                alternativeState = StateWhenTrue.Clone();
-                Join(ref alternativeState, ref StateWhenFalse);
-            }
-            else
-            {
-                alternativeState = this.State.Clone();
-            }
+            var alternativeConditionalState = PossiblyConditionalState.Create(this);
+            alternativeState = CloneAndUnsplit(ref alternativeConditionalState);
             var alternativeEndReachable = alternativeState.Reachable;
-            Join(ref consequenceConditionalState);
+
+            SetPossiblyConditionalState(in consequenceConditionalState);
+            Join(ref alternativeConditionalState);
 
             TypeSymbol? resultType;
             bool wasTargetTyped = node is BoundConditionalOperator { WasTargetTyped: true };
@@ -9959,15 +9953,27 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        private void SetState(PossiblyConditionalState other)
+        private LocalState CloneAndUnsplit(ref PossiblyConditionalState conditionalState)
         {
-            if (other.IsConditionalState)
+            if (!conditionalState.IsConditionalState)
             {
-                SetConditionalState(other.StateWhenTrue, other.StateWhenFalse);
+                return conditionalState.State.Clone();
+            }
+
+            var state = conditionalState.StateWhenTrue.Clone();
+            Join(ref state, ref conditionalState.StateWhenFalse);
+            return state;
+        }
+
+        private void SetPossiblyConditionalState(in PossiblyConditionalState conditionalState)
+        {
+            if (!conditionalState.IsConditionalState)
+            {
+                SetState(conditionalState.State);
             }
             else
             {
-                SetState(other.State);
+                SetConditionalState(conditionalState.StateWhenTrue, conditionalState.StateWhenFalse);
             }
         }
 
