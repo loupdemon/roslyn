@@ -847,12 +847,24 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (VisitPossibleConditionalAccess(node.Expression, out var conditionalStateWhenNotNull))
             {
                 Debug.Assert(!IsConditionalState);
-                switch (isTopLevelNonNullTest(node.Pattern))
+                // TODO: fix this up
+                // - conditional state, matches single bool
+                // - conditional state, matches non-null
+                // - unconditional state, matches non-null
+                if (conditionalStateWhenNotNull.IsConditionalState)
                 {
-                    case true:
+                    if (getSingleMatchingBoolean(node.Pattern) is bool b)
+                }
+                if (getSingleState(node.Pattern, conditionalStateWhenNotNull) is { HasValue: true } stateWhenNotNull)
+                {
+
+                }
+                switch (getTopLevelNonNullTest(node.Pattern))
+                {
+                    case (true, false):
                         SetConditionalState(getSingleState(node.Pattern, conditionalStateWhenNotNull), State);
                         break;
-                    case false:
+                    case (false, true):
                         SetConditionalState(State, getSingleState(node.Pattern, conditionalStateWhenNotNull));
                         break;
                 }
@@ -870,13 +882,13 @@ namespace Microsoft.CodeAnalysis.CSharp
             SetNotNullResult(node);
             return null;
 
-            LocalState getSingleState(BoundPattern pattern, PossiblyConditionalState conditionalState)
+            Optional<LocalState> getSingleState(BoundPattern pattern, PossiblyConditionalState conditionalState)
             {
                 if (!conditionalState.IsConditionalState)
                 {
                     return conditionalState.State;
                 }
-                else if (isBoolTest(pattern) is bool b)
+                else if (getSingleMatchingBoolean(pattern) is bool b)
                 {
                     return b ? conditionalState.StateWhenTrue : conditionalState.StateWhenFalse;
                 }
@@ -888,35 +900,44 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
 
-            // Returns `true` if the pattern only matches a `true` input.
-            // Returns `false` if the pattern only matches a `false` input.
-            // Otherwise, returns `null`.
-            static bool? isBoolTest(BoundPattern pattern)
+            // Gets the single boolean value which matches the given pattern, if applicable.
+            static bool? getSingleMatchingBoolean(BoundPattern pattern)
             {
-                // FIXME: we're testing against nullabel bools so handle negation propertly
+                if (getMatchingValues(pattern) is not { } matchingValues)
+                    return null;
+
+                return matchingValues switch
+                {
+                    { HasTrue: true, HasFalse: false, HasNull: false } => true,
+                    { HasTrue: false, HasFalse: true, HasNull: false } => false,
+                    _ => null
+                };
+            }
+
+            // Returns 'null' if the pattern doesn't accept a nullable bool or bool input.
+            // Returns a struct with flags set to 'true' for each value that is accepted by the pattern.
+            static NullableBoolValues? getMatchingValues(BoundPattern pattern)
+            {
                 switch (pattern)
                 {
                     case BoundConstantPattern { ConstantValue: { IsBoolean: true, BooleanValue: var boolValue } }:
-                        return boolValue;
+                        return new NullableBoolValues { HasTrue = boolValue, HasFalse = !boolValue, HasNull = false };
+                    case BoundConstantPattern { ConstantValue: { IsNull: true } }:
+                        return new NullableBoolValues { HasTrue = false, HasFalse = false, HasNull = true };
                     case BoundNegatedPattern negated:
-                        return !isBoolTest(negated.Negated);
-                    case BoundBinaryPattern binary:
-                        if (binary.Disjunction)
-                        {
-                            // `(a != null && a.b(out x)) is true or true` matches `true`
-                            // `(a != null && a.b(out x)) is true or false` matches any boolean
-                            // both subpatterns must have the same bool test for the test to propagate out
-                            var leftNullTest = isBoolTest(binary.Left);
-                            return leftNullTest is null ? null :
-                                leftNullTest != isBoolTest(binary.Right) ? null :
-                                leftNullTest;
-                        }
+                        if (getMatchingValues(negated.Negated) is not { } innerValues)
+                            return null;
 
-                        // `(a != null && a.b(out x)) is true and true` matches `true`
-                        // `(a != null && a.b(out x)) is true and var x` matches `true`
-                        // `(a != null && a.b(out x)) is true and false` never matches and is a compile error
-                        return isBoolTest(binary.Left) ?? isBoolTest(binary.Right);
-                    case BoundConstantPattern { ConstantValue: { IsBoolean: false } }:
+                        return new NullableBoolValues { HasTrue = !innerValues.HasTrue, HasFalse = !innerValues.HasFalse, HasNull = !innerValues.HasNull };
+                    case BoundBinaryPattern binary:
+                        if ((getMatchingValues(binary.Left), getMatchingValues(binary.Right)) is not ({ } innerLeft, { } innerRight))
+                            return null;
+
+                        if (binary.Disjunction)
+                            return new NullableBoolValues { HasTrue = innerLeft.HasTrue || innerRight.HasTrue, HasFalse = innerLeft.HasFalse || innerRight.HasFalse, HasNull = innerLeft.HasNull || innerRight.HasNull };
+                        else
+                            return new NullableBoolValues { HasTrue = innerLeft.HasTrue && innerRight.HasTrue, HasFalse = innerLeft.HasFalse && innerRight.HasFalse, HasNull = innerLeft.HasNull && innerRight.HasNull };
+                    case BoundConstantPattern:
                     case BoundDiscardPattern:
                     case BoundTypePattern:
                     case BoundRecursivePattern:
@@ -928,6 +949,13 @@ namespace Microsoft.CodeAnalysis.CSharp
                         throw ExceptionUtilities.UnexpectedValue(pattern.Kind);
                 }
             }
+        }
+
+        private struct NullableBoolValues
+        {
+            public bool HasTrue;
+            public bool HasFalse;
+            public bool HasNull;
         }
     }
 }
