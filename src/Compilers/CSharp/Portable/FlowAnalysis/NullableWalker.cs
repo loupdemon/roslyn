@@ -3752,7 +3752,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return true;
                 }
 
-                // can only learn from a bool constant operand if it's using the built in `bool operator ==(bool left, bool right)`
+                // can only learn from a bool constant operand here if it's using the built in `bool operator ==(bool left, bool right)`
                 if (binary.OperatorKind.IsUserDefined())
                 {
                     return false;
