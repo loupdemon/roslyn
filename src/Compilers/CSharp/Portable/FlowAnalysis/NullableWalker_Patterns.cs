@@ -847,26 +847,18 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (VisitPossibleConditionalAccess(node.Expression, out var conditionalStateWhenNotNull))
             {
                 Debug.Assert(!IsConditionalState);
-                // TODO: fix this up
-                // - conditional state, matches single bool
-                // - conditional state, matches non-null
-                // - unconditional state, matches non-null
-                if (conditionalStateWhenNotNull.IsConditionalState)
-                {
-                    if (getSingleMatchingBoolean(node.Pattern) is bool b)
-                }
-                if (getSingleState(node.Pattern, conditionalStateWhenNotNull) is { HasValue: true } stateWhenNotNull)
-                {
 
-                }
-                switch (getTopLevelNonNullTest(node.Pattern))
+                if (!conditionalStateWhenNotNull.IsConditionalState || !trySetConditionalStateWhenNotNull(conditionalStateWhenNotNull))
                 {
-                    case (true, false):
-                        SetConditionalState(getSingleState(node.Pattern, conditionalStateWhenNotNull), State);
-                        break;
-                    case (false, true):
-                        SetConditionalState(State, getSingleState(node.Pattern, conditionalStateWhenNotNull));
-                        break;
+                    switch (getTopLevelNullTests(node.Pattern))
+                    {
+                        case (true, false):
+                            SetConditionalState(CloneAndUnsplit(ref conditionalStateWhenNotNull), State);
+                            break;
+                        case (false, true):
+                            SetConditionalState(State, CloneAndUnsplit(ref conditionalStateWhenNotNull));
+                            break;
+                    }
                 }
             }
             else
@@ -882,41 +874,35 @@ namespace Microsoft.CodeAnalysis.CSharp
             SetNotNullResult(node);
             return null;
 
-            Optional<LocalState> getSingleState(BoundPattern pattern, PossiblyConditionalState conditionalState)
+            bool trySetConditionalStateWhenNotNull(PossiblyConditionalState conditionalState)
             {
-                if (!conditionalState.IsConditionalState)
+                if (getMatchingBoolValues(node.Pattern) is not { } matchingBoolValues)
                 {
-                    return conditionalState.State;
+                    return false;
                 }
-                else if (getSingleMatchingBoolean(pattern) is bool b)
-                {
-                    return b ? conditionalState.StateWhenTrue : conditionalState.StateWhenFalse;
-                }
-                else
-                {
-                    var state = conditionalState.StateWhenTrue;
-                    Join(ref state, ref conditionalState.StateWhenFalse);
-                    return state;
-                }
-            }
 
-            // Gets the single boolean value which matches the given pattern, if applicable.
-            static bool? getSingleMatchingBoolean(BoundPattern pattern)
-            {
-                if (getMatchingValues(pattern) is not { } matchingValues)
-                    return null;
-
-                return matchingValues switch
+                switch (matchingBoolValues)
                 {
-                    { HasTrue: true, HasFalse: false, HasNull: false } => true,
-                    { HasTrue: false, HasFalse: true, HasNull: false } => false,
-                    _ => null
-                };
+                    case { HasTrue: true, HasFalse: false, HasNull: false }:
+                        SetConditionalState(conditionalStateWhenNotNull.StateWhenTrue, State);
+                        return true;
+                    case { HasTrue: false, HasFalse: true, HasNull: false }:
+                        SetConditionalState(conditionalStateWhenNotNull.StateWhenFalse, State);
+                        return true;
+                    case { HasTrue: false, HasFalse: true, HasNull: true }:
+                        SetConditionalState(State, conditionalStateWhenNotNull.StateWhenTrue);
+                        return true;
+                    case { HasTrue: true, HasFalse: false, HasNull: true }:
+                        SetConditionalState(State, conditionalStateWhenNotNull.StateWhenFalse);
+                        return true;
+                    default:
+                        return false;
+                }
             }
 
             // Returns 'null' if the pattern doesn't accept a nullable bool or bool input.
             // Returns a struct with flags set to 'true' for each value that is accepted by the pattern.
-            static NullableBoolValues? getMatchingValues(BoundPattern pattern)
+            static NullableBoolValues? getMatchingBoolValues(BoundPattern pattern)
             {
                 switch (pattern)
                 {
@@ -925,18 +911,17 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case BoundConstantPattern { ConstantValue: { IsNull: true } }:
                         return new NullableBoolValues { HasTrue = false, HasFalse = false, HasNull = true };
                     case BoundNegatedPattern negated:
-                        if (getMatchingValues(negated.Negated) is not { } innerValues)
+                        if (getMatchingBoolValues(negated.Negated) is not { } innerValues)
                             return null;
 
                         return new NullableBoolValues { HasTrue = !innerValues.HasTrue, HasFalse = !innerValues.HasFalse, HasNull = !innerValues.HasNull };
                     case BoundBinaryPattern binary:
-                        if ((getMatchingValues(binary.Left), getMatchingValues(binary.Right)) is not ({ } innerLeft, { } innerRight))
+                        if ((getMatchingBoolValues(binary.Left), getMatchingBoolValues(binary.Right)) is not ({ } innerLeft, { } innerRight))
                             return null;
 
-                        if (binary.Disjunction)
-                            return new NullableBoolValues { HasTrue = innerLeft.HasTrue || innerRight.HasTrue, HasFalse = innerLeft.HasFalse || innerRight.HasFalse, HasNull = innerLeft.HasNull || innerRight.HasNull };
-                        else
-                            return new NullableBoolValues { HasTrue = innerLeft.HasTrue && innerRight.HasTrue, HasFalse = innerLeft.HasFalse && innerRight.HasFalse, HasNull = innerLeft.HasNull && innerRight.HasNull };
+                        return binary.Disjunction
+                            ? new NullableBoolValues { HasTrue = innerLeft.HasTrue || innerRight.HasTrue, HasFalse = innerLeft.HasFalse || innerRight.HasFalse, HasNull = innerLeft.HasNull || innerRight.HasNull }
+                            : new NullableBoolValues { HasTrue = innerLeft.HasTrue && innerRight.HasTrue, HasFalse = innerLeft.HasFalse && innerRight.HasFalse, HasNull = innerLeft.HasNull && innerRight.HasNull };
                     case BoundConstantPattern:
                     case BoundDiscardPattern:
                     case BoundTypePattern:
@@ -945,6 +930,37 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case BoundRelationalPattern:
                     case BoundDeclarationPattern:
                         return null;
+                    default:
+                        throw ExceptionUtilities.UnexpectedValue(pattern.Kind);
+                }
+            }
+
+            static (bool hasNotNull, bool hasNull) getTopLevelNullTests(BoundPattern pattern)
+            {
+                switch (pattern)
+                {
+                    case BoundConstantPattern { ConstantValue: { IsNull: true } }:
+                        return (hasNotNull: false, hasNull: true);
+                    case BoundConstantPattern { ConstantValue: { IsNull: false } }:
+                    case BoundDeclarationPattern { IsVar: false }:
+                    case BoundTypePattern:
+                    case BoundRecursivePattern:
+                    case BoundITuplePattern:
+                    case BoundRelationalPattern:
+                        return (hasNotNull: true, hasNull: false);
+                    case BoundNegatedPattern negated:
+                        var (innerHasNotNull, innerHasNull) = getTopLevelNullTests(negated.Negated);
+                        return (!innerHasNotNull, !innerHasNull);
+                    case BoundBinaryPattern binary:
+                        var (leftHasNotNull, leftHasNull) = getTopLevelNullTests(binary.Left);
+                        var (rightHasNotNull, rightHasNull) = getTopLevelNullTests(binary.Right);
+
+                        return binary.Disjunction
+                            ? (hasNotNull: leftHasNotNull || rightHasNotNull, hasNull: leftHasNull || rightHasNull)
+                            : (hasNotNull: leftHasNotNull && rightHasNotNull, hasNull: leftHasNull && rightHasNull);
+                    case BoundDeclarationPattern { IsVar: true }:
+                    case BoundDiscardPattern:
+                        return (hasNotNull: true, hasNull: true);
                     default:
                         throw ExceptionUtilities.UnexpectedValue(pattern.Kind);
                 }
