@@ -2713,7 +2713,6 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             stateWhenNotNull = default;
             return false;
-
         }
 
         /// <summary>
