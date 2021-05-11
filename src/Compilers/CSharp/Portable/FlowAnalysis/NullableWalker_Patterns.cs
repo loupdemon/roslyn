@@ -844,24 +844,8 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(!IsConditionalState);
             LearnFromAnyNullPatterns(node.Expression, node.Pattern);
             VisitPatternForRewriting(node.Pattern);
-            if (VisitPossibleConditionalAccess(node.Expression, out var conditionalStateWhenNotNull))
-            {
-                Debug.Assert(!IsConditionalState);
-
-                if (!conditionalStateWhenNotNull.IsConditionalState || !trySetConditionalStateWhenNotNull(conditionalStateWhenNotNull))
-                {
-                    switch (getTopLevelNullTests(node.Pattern))
-                    {
-                        case (true, false):
-                            SetConditionalState(CloneAndUnsplit(ref conditionalStateWhenNotNull), State);
-                            break;
-                        case (false, true):
-                            SetConditionalState(State, CloneAndUnsplit(ref conditionalStateWhenNotNull));
-                            break;
-                    }
-                }
-            }
-            else
+            if (!VisitPossibleConditionalAccess(node.Expression, out var conditionalStateWhenNotNull)
+                || !trySetStateWhenNotNull(conditionalStateWhenNotNull))
             {
                 var expressionState = ResultType;
                 var state = PossiblyConditionalState.Create(this);
@@ -874,14 +858,11 @@ namespace Microsoft.CodeAnalysis.CSharp
             SetNotNullResult(node);
             return null;
 
-            bool trySetConditionalStateWhenNotNull(PossiblyConditionalState conditionalState)
+            bool trySetStateWhenNotNull(PossiblyConditionalState conditionalState)
             {
-                if (getMatchingBoolValues(node.Pattern) is not { } matchingBoolValues)
-                {
-                    return false;
-                }
+                Debug.Assert(!IsConditionalState);
 
-                switch (matchingBoolValues)
+                switch (getMatchingBoolValues(node.Pattern))
                 {
                     case { HasTrue: true, HasFalse: false, HasNull: false }:
                         SetConditionalState(conditionalStateWhenNotNull.StateWhenTrue, State);
@@ -895,9 +876,19 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case { HasTrue: true, HasFalse: false, HasNull: true }:
                         SetConditionalState(State, conditionalStateWhenNotNull.StateWhenFalse);
                         return true;
-                    default:
-                        return false;
                 }
+
+                switch (getTopLevelNullTests(node.Pattern))
+                {
+                    case (true, false):
+                        SetConditionalState(CloneAndUnsplit(ref conditionalStateWhenNotNull), State);
+                        return true;
+                    case (false, true):
+                        SetConditionalState(State, CloneAndUnsplit(ref conditionalStateWhenNotNull));
+                        return true;
+                }
+
+                return false;
             }
 
             // Returns 'null' if the pattern doesn't accept a nullable bool or bool input.
