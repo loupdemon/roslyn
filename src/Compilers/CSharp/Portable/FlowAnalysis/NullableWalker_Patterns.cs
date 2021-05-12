@@ -926,9 +926,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case BoundBinaryPattern binary:
                         var (innerLeft, innerRight) = (getMatchingBoolValues(binary.Left), getMatchingBoolValues(binary.Right));
 
-                        // TODO: it feels like for a conjunction, we can tolerate one of the operands not testing `bool?` values
-                        // e.g. `expr is true and var x`
-                        // TODO: several more scenarios need to be tested.
                         return binary.Disjunction
                             ? (hasTrue: innerLeft.hasTrue || innerRight.hasTrue, hasFalse: innerLeft.hasFalse || innerRight.hasFalse, hasNull: innerLeft.hasNull || innerRight.hasNull)
                             : (hasTrue: innerLeft.hasTrue && innerRight.hasTrue, hasFalse: innerLeft.hasFalse && innerRight.hasFalse, hasNull: innerLeft.hasNull && innerRight.hasNull);
