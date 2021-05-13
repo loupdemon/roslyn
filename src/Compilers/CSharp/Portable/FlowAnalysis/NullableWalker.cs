@@ -4001,6 +4001,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// Get all nested conditional slots for those sub-expressions. For example in a?.b?.c we'll set a, b, and c.
         /// Only returns slots for tracked expressions.
         /// </summary>
+        /// <remarks>https://github.com/dotnet/roslyn/issues/53397 This method should potentially be removed.</remarks>
         private void GetSlotsToMarkAsNotNullable(BoundExpression operand, ArrayBuilder<int> slotBuilder)
         {
             Debug.Assert(operand != null);
@@ -4095,7 +4096,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
         }
 
-        // PROTOTYPE(improved-definite-assignment): eventually, GetSlotsToMarkAsNotNullable should be removed
         private void LearnFromNonNullTest(BoundExpression expression, ref LocalState state)
         {
             if (expression.Kind == BoundKind.AwaitableValuePlaceholder)
