@@ -881,12 +881,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                     }
                 }
 
-                switch (getTopLevelNullTests(node.Pattern))
+                switch (IsTopLevelNonNullTest(node.Pattern))
                 {
-                    case (hasNotNull: true, hasNull: false):
+                    case true:
                         SetConditionalState(CloneAndUnsplit(ref conditionalStateWhenNotNull), State);
                         return true;
-                    case (hasNotNull: false, hasNull: true):
+                    case false:
                         SetConditionalState(State, CloneAndUnsplit(ref conditionalStateWhenNotNull));
                         return true;
                 }
@@ -929,37 +929,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                         return binary.Disjunction
                             ? (hasTrue: innerLeft.hasTrue || innerRight.hasTrue, hasFalse: innerLeft.hasFalse || innerRight.hasFalse, hasNull: innerLeft.hasNull || innerRight.hasNull)
                             : (hasTrue: innerLeft.hasTrue && innerRight.hasTrue, hasFalse: innerLeft.hasFalse && innerRight.hasFalse, hasNull: innerLeft.hasNull && innerRight.hasNull);
-                    default:
-                        throw ExceptionUtilities.UnexpectedValue(pattern.Kind);
-                }
-            }
-
-            static (bool hasNotNull, bool hasNull) getTopLevelNullTests(BoundPattern pattern)
-            {
-                switch (pattern)
-                {
-                    case BoundConstantPattern { ConstantValue: { IsNull: true } }:
-                        return (hasNotNull: false, hasNull: true);
-                    case BoundConstantPattern { ConstantValue: { IsNull: false } }:
-                    case BoundDeclarationPattern { IsVar: false }:
-                    case BoundTypePattern:
-                    case BoundRecursivePattern:
-                    case BoundITuplePattern:
-                    case BoundRelationalPattern:
-                        return (hasNotNull: true, hasNull: false);
-                    case BoundNegatedPattern negated:
-                        var (innerHasNotNull, innerHasNull) = getTopLevelNullTests(negated.Negated);
-                        return (!innerHasNotNull, !innerHasNull);
-                    case BoundBinaryPattern binary:
-                        var (leftHasNotNull, leftHasNull) = getTopLevelNullTests(binary.Left);
-                        var (rightHasNotNull, rightHasNull) = getTopLevelNullTests(binary.Right);
-
-                        return binary.Disjunction
-                            ? (hasNotNull: leftHasNotNull || rightHasNotNull, hasNull: leftHasNull || rightHasNull)
-                            : (hasNotNull: leftHasNotNull && rightHasNotNull, hasNull: leftHasNull && rightHasNull);
-                    case BoundDeclarationPattern { IsVar: true }:
-                    case BoundDiscardPattern:
-                        return (hasNotNull: true, hasNull: true);
                     default:
                         throw ExceptionUtilities.UnexpectedValue(pattern.Kind);
                 }
