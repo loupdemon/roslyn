@@ -3646,27 +3646,30 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // After the two visits of the RHS, we may set a conditional state using the state after (1) as the StateWhenTrue and the state after (2) as the StateWhenFalse.
                 // Depending on whether `==` or `!=` was used, and depending on the value of the RHS, we may then swap the StateWhenTrue with the StateWhenFalse.
 
-                var oldDisableDiagnostics = _disableDiagnostics;
-                _disableDiagnostics = true;
-
-                var stateAfterLeft = this.State;
-                SetState(getUnconditionalStateWhenNotNull(rightOperand, conditionalStateWhenNotNull));
-                VisitRvalue(rightOperand);
-                var stateWhenNotNull = this.State;
-
-                _disableDiagnostics = oldDisableDiagnostics;
-
                 // Now visit the right side for public API and diagnostics using the worst-case state from the LHS.
                 // Note that we do this visit last to try and make sure that the "visit for public API" overwrites walker state recorded during previous visits where possible.
-                SetState(stateAfterLeft);
                 var rightType = VisitRvalueWithState(rightOperand);
-                ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftType, rightOperand, rightConversion, rightType, binary);
+                var stateAfterLeft = this.State;
                 if (isKnownNullOrNotNull(rightOperand, rightType))
                 {
+                    var oldFlags = (_disableDiagnostics, _disableNullabilityAnalysis);
+                    (_disableDiagnostics, _disableNullabilityAnalysis) = (true, true);
+                    
+                    SetState(getUnconditionalStateWhenNotNull(rightOperand, conditionalStateWhenNotNull));
+                    VisitRvalue(rightOperand);
+                    var stateWhenNotNull = this.State;
+
+                    (_disableDiagnostics, _disableNullabilityAnalysis) = oldFlags;
+                    ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftType, rightOperand, rightConversion, rightType, binary);
+
                     var isNullConstant = rightOperand.ConstantValue?.IsNull == true;
                     SetConditionalState(isNullConstant == isEquals(binary)
-                        ? (State, stateWhenNotNull)
-                        : (stateWhenNotNull, State));
+                        ? (stateAfterLeft, State)
+                        : (State, stateAfterLeft));
+                }
+                else
+                {
+                    ReinferBinaryOperatorAndSetResult(leftOperand, leftConversion, leftType, rightOperand, rightConversion, rightType, binary);
                 }
 
                 if (stack.Count == 0)
