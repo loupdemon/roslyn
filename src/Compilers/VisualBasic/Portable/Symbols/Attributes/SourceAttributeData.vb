@@ -73,14 +73,15 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.Symbols
             End Get
         End Property
 
-        Friend NotOverridable Overrides ReadOnly Property IsConditionallyOmitted As Boolean
+        ' TODO: fix name
+        Friend NotOverridable Overrides ReadOnly Property IsOmitted As Boolean
             Get
                 Return _isConditionallyOmitted
             End Get
         End Property
 
         Friend Function WithOmittedCondition(isConditionallyOmitted As Boolean) As SourceAttributeData
-            If Me.IsConditionallyOmitted = isConditionallyOmitted Then
+            If Me.IsOmitted = isConditionallyOmitted Then
                 Return Me
             End If
 

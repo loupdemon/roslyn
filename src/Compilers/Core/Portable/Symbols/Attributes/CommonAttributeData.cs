@@ -49,11 +49,14 @@ namespace Microsoft.CodeAnalysis
         protected internal abstract ImmutableArray<KeyValuePair<string, TypedConstant>> CommonNamedArguments { get; }
 
         /// <summary>
-        /// Attribute is conditionally omitted if it is a source attribute and both the following are true:
+        /// Attribute is omitted if it is a source attribute and both the following are true:
         /// (a) It has at least one applied conditional attribute AND
         /// (b) None of conditional symbols are true at the attribute source location.
+        ///
+        /// Attribute is also omitted if it is a source attribute, and the attribute class has `AttributeUsage.AllowMultiple == false`,
+        /// and an identical application of this attribute is present on an earlier partial declaration in the compilation.
         /// </summary>
-        internal virtual bool IsConditionallyOmitted
+        internal virtual bool IsOmitted
         {
             get { return false; }
         }

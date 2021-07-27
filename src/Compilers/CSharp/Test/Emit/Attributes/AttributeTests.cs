@@ -6821,11 +6821,7 @@ partial class C
 
             var compilation = CreateCompilation(source, null, options: opt);
 
-            compilation.VerifyDiagnostics(
-                // error CS0579: Duplicate 'A' attribute
-                Diagnostic(ErrorCode.ERR_DuplicateAttribute, @"A").WithArguments("A"),
-                // error CS0579: Duplicate 'B' attribute
-                Diagnostic(ErrorCode.ERR_DuplicateAttribute, @"B").WithArguments("B"));
+            compilation.VerifyDiagnostics();
         }
 
         [WorkItem(542625, "http://vstfdevdiv:8080/DevDiv2/DevDiv/_workitems/edit/542625")]
@@ -6879,9 +6875,6 @@ partial class C
                 // (25,34): error CS0579: Duplicate 'A' attribute
                 //     static partial void Goo6<[A][A] T>() { }
                 Diagnostic(ErrorCode.ERR_DuplicateAttribute, "A").WithArguments("A").WithLocation(25, 34),
-                // (7,30): error CS0579: Duplicate 'A' attribute
-                //     static partial void Goo<[A] T>() { }
-                Diagnostic(ErrorCode.ERR_DuplicateAttribute, "A").WithArguments("A").WithLocation(7, 30),
                 // (15,17): warning CS0169: The field 'C.Goo3' is never used
                 //     private int Goo3;
                 Diagnostic(ErrorCode.WRN_UnreferencedField, "Goo3").WithArguments("C.Goo3").WithLocation(15, 17));
@@ -6938,12 +6931,264 @@ partial class C
                 // (25,34): error CS0579: Duplicate 'A' attribute
                 //     static partial void Goo6([A][A] int y) { }
                 Diagnostic(ErrorCode.ERR_DuplicateAttribute, "A").WithArguments("A").WithLocation(25, 34),
-                // (6,37): error CS0579: Duplicate 'A' attribute
-                //     static partial void Goo([param: A]int y);
-                Diagnostic(ErrorCode.ERR_DuplicateAttribute, "A").WithArguments("A").WithLocation(6, 37),
                 // (15,17): warning CS0169: The field 'C.Goo3' is never used
                 //     private int Goo3;
                 Diagnostic(ErrorCode.WRN_UnreferencedField, "Goo3").WithArguments("C.Goo3").WithLocation(15, 17));
+        }
+
+        [Fact]
+        public void PartialAttributeDuplicate_01()
+        {
+            var source = @"
+class Attr : System.Attribute { public Attr(int x) { } }
+
+public partial class C
+{
+    [Attr(1)]
+    public partial void M1();
+
+    [Attr(1)]
+    public partial void M1() { }
+}
+";
+            var verifier = CompileAndVerify(source, sourceSymbolValidator: validateSource, symbolValidator: validate);
+            verifier.VerifyDiagnostics();
+
+            var comp = CreateCompilation(source, parseOptions: TestOptions.Regular9);
+            comp.VerifyDiagnostics(
+                // (9,6): error CS8773: Feature 'repeated attributes on partial members' is not available in C# 9.0. Please use language version 10.0 or greater.
+                //     [Attr(1)]
+                Diagnostic(ErrorCode.ERR_FeatureNotAvailableInVersion9, "Attr").WithArguments("repeated attributes on partial members", "10.0").WithLocation(9, 6));
+
+            void validateSource(ModuleSymbol module)
+            {
+                var cm1 = module.GlobalNamespace.GetMember<MethodSymbol>("C.M1");
+                var attributes = cm1.GetAttributes();
+                Assert.Equal(new[] { "Attr(1)", "Attr(1)" }, GetAttributeStrings(attributes));
+            }
+
+            void validate(ModuleSymbol module)
+            {
+                var cm1 = module.GlobalNamespace.GetMember<MethodSymbol>("C.M1");
+                var attributes = cm1.GetAttributes();
+                Assert.Equal(new[] { "Attr(1)" }, GetAttributeStrings(attributes));
+            }
+        }
+
+        [Fact]
+        public void PartialAttributeDuplicate_02()
+        {
+            var source = @"
+class Attr : System.Attribute { public Attr(int x) { } }
+
+public partial class C
+{
+    [Attr(1)]
+    [Attr(1)]
+    public partial void M1();
+
+    public partial void M1() { }
+}
+";
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics(
+                // (7,6): error CS0579: Duplicate 'Attr' attribute
+                //     [Attr(1)]
+                Diagnostic(ErrorCode.ERR_DuplicateAttribute, "Attr").WithArguments("Attr").WithLocation(7, 6));
+        }
+
+        [Fact]
+        public void PartialAttributeDuplicate_03()
+        {
+            var source = @"
+class Attr : System.Attribute { public Attr(int x) { } }
+
+public partial class C
+{
+    [Attr(1)]
+    public partial void M1();
+
+    [Attr(2)]
+    public partial void M1() { }
+}
+";
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics(
+                // (9,6): error CS8970: Attribute 'Attr' has different arguments in another declaration of 'C.M1()'.
+                //     [Attr(2)]
+                Diagnostic(ErrorCode.ERR_RepeatedAttributeArgumentDifference, "Attr").WithArguments("Attr", "C.M1()").WithLocation(9, 6));
+
+            var m1 = comp.GetMember<MethodSymbol>("C.M1");
+            var attrs = m1.GetAttributes();
+            Assert.Equal(new[] { "Attr(1)", "Attr(2)" }, GetAttributeStrings(attrs));
+        }
+
+        [Fact]
+        public void PartialAttributeDuplicate_04()
+        {
+            var source = @"
+class Attr : System.Attribute { public Attr(int x) { } }
+
+public partial class C
+{
+    [Attr(1), Attr(2)]
+    public partial void M1();
+
+    [Attr(2), Attr(1)]
+    public partial void M1() { }
+}
+";
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics(
+                // (6,15): error CS0579: Duplicate 'Attr' attribute
+                //     [Attr(1), Attr(2)]
+                Diagnostic(ErrorCode.ERR_DuplicateAttribute, "Attr").WithArguments("Attr").WithLocation(6, 15),
+                // (9,6): error CS8970: Attribute 'Attr' has different arguments in another declaration of 'C.M1()'.
+                //     [Attr(2), Attr(1)]
+                Diagnostic(ErrorCode.ERR_RepeatedAttributeArgumentDifference, "Attr").WithArguments("Attr", "C.M1()").WithLocation(9, 6));
+
+            var m1 = comp.GetMember<MethodSymbol>("C.M1");
+            var attrs = m1.GetAttributes();
+            Assert.Equal(new[] { "Attr(1)", "Attr(2)", "Attr(2)", "Attr(1)" }, GetAttributeStrings(attrs));
+        }
+
+        [Fact]
+        public void PartialAttributeDuplicate_05()
+        {
+            var source = @"
+class Attr : System.Attribute { public Attr(int x) { } }
+
+public partial class C
+{
+    [Attr(1)]
+    [return: Attr(2)]
+    public partial void M1([Attr(3)] string x);
+
+    [Attr(1)]
+    [return: Attr(2)]
+    public partial void M1([Attr(3)] string x) { }
+}
+";
+            var verifier = CompileAndVerify(source, sourceSymbolValidator: validateSource, symbolValidator: validate);
+            verifier.VerifyDiagnostics();
+
+            void validateSource(ModuleSymbol module)
+            {
+                var m1 = module.GlobalNamespace.GetMember<MethodSymbol>("C.M1");
+                var attrs = m1.GetAttributes();
+                Assert.Equal(new[] { "Attr(1)", "Attr(1)" }, GetAttributeStrings(attrs));
+
+                var returnAttrs = m1.GetReturnTypeAttributes();
+                Assert.Equal(new[] { "Attr(2)", "Attr(2)" }, GetAttributeStrings(returnAttrs));
+
+                var param = m1.Parameters[0];
+                var paramAttrs = param.GetAttributes();
+                Assert.Equal(new[] { "Attr(3)", "Attr(3)" }, GetAttributeStrings(paramAttrs));
+            }
+
+            void validate(ModuleSymbol module)
+            {
+                var m1 = module.GlobalNamespace.GetMember<MethodSymbol>("C.M1");
+                var attrs = m1.GetAttributes();
+                Assert.Equal(new[] { "Attr(1)" }, GetAttributeStrings(attrs));
+
+                var returnAttrs = m1.GetReturnTypeAttributes();
+                Assert.Equal(new[] { "Attr(2)" }, GetAttributeStrings(returnAttrs));
+
+                var param = m1.Parameters[0];
+                var paramAttrs = param.GetAttributes();
+                Assert.Equal(new[] { "Attr(3)" }, GetAttributeStrings(paramAttrs));
+            }
+        }
+
+        [Fact]
+        public void PartialAttributeDuplicate_06()
+        {
+            var source = @"
+class Attr<T> : System.Attribute { }
+
+public partial class C
+{
+    [Attr<int>]
+    public partial void M1();
+
+    [Attr<int>]
+    public partial void M1() { }
+}
+";
+            var verifier = CompileAndVerify(source, sourceSymbolValidator: validateSource, symbolValidator: validate);
+            verifier.VerifyDiagnostics();
+
+            void validateSource(ModuleSymbol module)
+            {
+                var m1 = module.GlobalNamespace.GetMember<MethodSymbol>("C.M1");
+                var attrs = m1.GetAttributes();
+                Assert.Equal(new[] { "Attr<System.Int32>", "Attr<System.Int32>" }, GetAttributeStrings(attrs));
+            }
+
+            void validate(ModuleSymbol module)
+            {
+                var m1 = module.GlobalNamespace.GetMember<MethodSymbol>("C.M1");
+                var attrs = m1.GetAttributes();
+                Assert.Equal(new[] { "Attr<System.Int32>" }, GetAttributeStrings(attrs));
+            }
+        }
+
+        [Fact]
+        public void PartialAttributeDuplicate_07()
+        {
+            var source = @"
+class Attr<T> : System.Attribute { }
+
+public partial class C
+{
+    [Attr<int>]
+    public partial void M1();
+
+    [Attr<object>]
+    public partial void M1() { }
+}
+";
+            var comp = CreateCompilation(source);
+            comp.VerifyDiagnostics(
+                // (9,6): error CS8970: Attribute 'Attr<>' has different arguments in another declaration of 'C.M1()'.
+                //     [Attr<object>]
+                Diagnostic(ErrorCode.ERR_RepeatedAttributeArgumentDifference, "Attr<object>").WithArguments("Attr<>", "C.M1()").WithLocation(9, 6));
+        }
+
+        [Fact]
+        public void PartialAttributeDuplicate_08()
+        {
+            var source = @"
+using MyInt = System.Int32;
+
+class Attr<T> : System.Attribute { }
+
+public partial class C
+{
+    [Attr<MyInt>]
+    public partial void M1();
+
+    [Attr<int>]
+    public partial void M1() { }
+}
+";
+            var verifier = CompileAndVerify(source, sourceSymbolValidator: validateSource, symbolValidator: validate);
+            verifier.VerifyDiagnostics();
+
+            void validateSource(ModuleSymbol module)
+            {
+                var m1 = module.GlobalNamespace.GetMember<MethodSymbol>("C.M1");
+                var attrs = m1.GetAttributes();
+                Assert.Equal(new[] { "Attr<System.Int32>", "Attr<System.Int32>" }, GetAttributeStrings(attrs));
+            }
+
+            void validate(ModuleSymbol module)
+            {
+                var m1 = module.GlobalNamespace.GetMember<MethodSymbol>("C.M1");
+                var attrs = m1.GetAttributes();
+                Assert.Equal(new[] { "Attr<System.Int32>" }, GetAttributeStrings(attrs));
+            }
         }
 
         [Fact]

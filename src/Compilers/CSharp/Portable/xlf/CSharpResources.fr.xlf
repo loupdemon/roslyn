@@ -1027,6 +1027,11 @@
         <target state="translated">Les modèles relationnels ne peuvent pas être utilisés pour une valeur NaN à virgule flottante.</target>
         <note />
       </trans-unit>
+      <trans-unit id="ERR_RepeatedAttributeArgumentDifference">
+        <source>Attribute '{0}' has different arguments in another declaration of '{1}'.</source>
+        <target state="new">Attribute '{0}' has different arguments in another declaration of '{1}'.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="ERR_RuntimeDoesNotSupportCovariantPropertiesOfClasses">
         <source>'{0}': Target runtime doesn't support covariant types in overrides. Type must be '{2}' to match overridden member '{1}'</source>
         <target state="translated">'{0}' : le runtime cible ne prend pas en charge les types covariants dans les substitutions. Le type doit être '{2}' pour correspondre au membre substitué '{1}'</target>
@@ -1291,6 +1296,11 @@
         <source>record structs</source>
         <target state="new">record structs</target>
         <note>'record structs' is not localizable.</note>
+      </trans-unit>
+      <trans-unit id="IDS_FeatureRepeatedAttributesOnPartialMembers">
+        <source>repeated attributes on partial members</source>
+        <target state="new">repeated attributes on partial members</target>
+        <note />
       </trans-unit>
       <trans-unit id="IDS_FeatureSealedToStringInRecord">
         <source>sealed ToString in record</source>

@@ -517,7 +517,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.Symbols
             ' Attribute type is conditionally omitted if both the following are true:
             '  (a) It has at least one applied conditional attribute AND
             '  (b) None of conditional symbols are true at the attribute source location.
-            If Me.IsConditionallyOmitted Then
+            If Me.IsOmitted Then
                 Return False
             End If
 

@@ -1027,6 +1027,11 @@
         <target state="translated">Non è possibile usare i criteri relazionali per un valore NaN a virgola mobile.</target>
         <note />
       </trans-unit>
+      <trans-unit id="ERR_RepeatedAttributeArgumentDifference">
+        <source>Attribute '{0}' has different arguments in another declaration of '{1}'.</source>
+        <target state="new">Attribute '{0}' has different arguments in another declaration of '{1}'.</target>
+        <note />
+      </trans-unit>
       <trans-unit id="ERR_RuntimeDoesNotSupportCovariantPropertiesOfClasses">
         <source>'{0}': Target runtime doesn't support covariant types in overrides. Type must be '{2}' to match overridden member '{1}'</source>
         <target state="translated">'{0}': il runtime di destinazione non supporta tipi covarianti negli override. Il tipo deve essere '{2}' in modo da corrispondere al membro '{1}' di cui è stato eseguito l'override</target>
@@ -1291,6 +1296,11 @@
         <source>record structs</source>
         <target state="new">record structs</target>
         <note>'record structs' is not localizable.</note>
+      </trans-unit>
+      <trans-unit id="IDS_FeatureRepeatedAttributesOnPartialMembers">
+        <source>repeated attributes on partial members</source>
+        <target state="new">repeated attributes on partial members</target>
+        <note />
       </trans-unit>
       <trans-unit id="IDS_FeatureSealedToStringInRecord">
         <source>sealed ToString in record</source>

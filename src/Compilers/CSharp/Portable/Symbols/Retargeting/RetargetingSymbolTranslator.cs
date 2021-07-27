@@ -1221,7 +1221,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols.Retargeting
                     oldAttribute.ConstructorArgumentsSourceIndices,
                     newAttributeNamedArguments,
                     oldAttribute.HasErrors,
-                    oldAttribute.IsConditionallyOmitted);
+                    oldAttribute.IsOmitted);
             }
 
             private ImmutableArray<TypedConstant> RetargetAttributeConstructorArguments(ImmutableArray<TypedConstant> constructorArguments)

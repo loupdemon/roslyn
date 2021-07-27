@@ -6848,4 +6848,10 @@ To remove the warning, you can use /reference instead (set the Embed Interop Typ
   <data name="IDS_FeatureGenericAttributes" xml:space="preserve">
     <value>generic attributes</value>
   </data>
+  <data name="IDS_FeatureRepeatedAttributesOnPartialMembers" xml:space="preserve">
+    <value>repeated attributes on partial members</value>
+  </data>
+  <data name="ERR_RepeatedAttributeArgumentDifference" xml:space="preserve">
+    <value>Attribute '{0}' has different arguments in another declaration of '{1}'.</value>
+  </data>
 </root>

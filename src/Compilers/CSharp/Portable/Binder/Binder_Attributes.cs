@@ -87,7 +87,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     CompoundUseSiteInfo<AssemblySymbol> useSiteInfo = binder.GetNewCompoundUseSiteInfo(diagnostics);
                     bool isConditionallyOmitted = binder.IsAttributeConditionallyOmitted(attribute.AttributeClass, attributeSyntax.SyntaxTree, ref useSiteInfo);
                     diagnostics.Add(attributeSyntax, useSiteInfo);
-                    attributesBuilder[i] = attribute.WithOmittedCondition(isConditionallyOmitted);
+                    attributesBuilder[i] = attribute.WithOmitted(isConditionallyOmitted);
                 }
             }
         }

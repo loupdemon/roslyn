@@ -292,7 +292,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.Symbols
                             Continue For
                         End If
                         Dim newArgs = ImmutableArray.Create(New TypedConstant(oldTypedConstant.TypeInternal, oldTypedConstant.Kind, correctedParameterName))
-                        Yield New SourceAttributeData(attribute.ApplicationSyntaxReference, attribute.AttributeClass, attribute.AttributeConstructor, newArgs, attribute.CommonNamedArguments, attribute.IsConditionallyOmitted, attribute.HasErrors)
+                        Yield New SourceAttributeData(attribute.ApplicationSyntaxReference, attribute.AttributeClass, attribute.AttributeConstructor, newArgs, attribute.CommonNamedArguments, attribute.IsOmitted, attribute.HasErrors)
                         Continue For
                     End If
                 End If

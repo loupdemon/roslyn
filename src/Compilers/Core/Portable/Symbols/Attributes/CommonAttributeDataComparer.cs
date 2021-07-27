@@ -30,7 +30,7 @@ namespace Microsoft.CodeAnalysis
             return attr1.AttributeClass == attr2.AttributeClass &&
                 attr1.AttributeConstructor == attr2.AttributeConstructor &&
                 attr1.HasErrors == attr2.HasErrors &&
-                attr1.IsConditionallyOmitted == attr2.IsConditionallyOmitted &&
+                attr1.IsOmitted == attr2.IsOmitted &&
                 attr1.CommonConstructorArguments.SequenceEqual(attr2.CommonConstructorArguments) &&
                 attr1.NamedArguments.SequenceEqual(attr2.NamedArguments);
         }
@@ -42,7 +42,7 @@ namespace Microsoft.CodeAnalysis
             int hash = attr.AttributeClass?.GetHashCode() ?? 0;
             hash = attr.AttributeConstructor != null ? Hash.Combine(attr.AttributeConstructor.GetHashCode(), hash) : hash;
             hash = Hash.Combine(attr.HasErrors, hash);
-            hash = Hash.Combine(attr.IsConditionallyOmitted, hash);
+            hash = Hash.Combine(attr.IsOmitted, hash);
             hash = Hash.Combine(GetHashCodeForConstructorArguments(attr.CommonConstructorArguments), hash);
             hash = Hash.Combine(GetHashCodeForNamedArguments(attr.NamedArguments), hash);
 

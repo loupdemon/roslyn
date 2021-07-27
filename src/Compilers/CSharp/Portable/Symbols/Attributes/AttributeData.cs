@@ -42,7 +42,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         public new abstract SyntaxReference? ApplicationSyntaxReference { get; }
 
         // Overridden to be able to apply MemberNotNull to the new members
-        [MemberNotNullWhen(true, nameof(AttributeClass), nameof(AttributeConstructor))]
+        [MemberNotNullWhen(false, nameof(AttributeClass), nameof(AttributeConstructor))]
         internal override bool HasErrors
         {
             get
@@ -696,7 +696,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             // Attribute type is conditionally omitted if both the following are true:
             //  (a) It has at least one applied/inherited conditional attribute AND
             //  (b) None of conditional symbols are defined in the source file where the given attribute was defined.
-            if (this.IsConditionallyOmitted)
+            if (this.IsOmitted)
             {
                 return false;
             }

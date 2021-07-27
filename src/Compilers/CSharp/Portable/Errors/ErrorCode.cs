@@ -1992,7 +1992,8 @@ namespace Microsoft.CodeAnalysis.CSharp
         WRN_CallerArgumentExpressionParamForUnconsumedLocation = 8966,
         ERR_AttrTypeArgCannotBeTypeVar = 8967,
         WRN_AttrDependentTypeNotAllowed = 8968,
-        ERR_AttrDependentTypeNotAllowed = 8969
+        ERR_AttrDependentTypeNotAllowed = 8969,
+        ERR_RepeatedAttributeArgumentDifference = 8970
 
         #endregion
 

@@ -22,7 +22,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
         private readonly ImmutableArray<TypedConstant> _constructorArguments;
         private readonly ImmutableArray<int> _constructorArgumentsSourceIndices;
         private readonly ImmutableArray<KeyValuePair<string, TypedConstant>> _namedArguments;
-        private readonly bool _isConditionallyOmitted;
+        private readonly bool _isOmitted;
         private readonly bool _hasErrors;
         private readonly SyntaxReference? _applicationNode;
 
@@ -34,9 +34,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             ImmutableArray<int> constructorArgumentsSourceIndices,
             ImmutableArray<KeyValuePair<string, TypedConstant>> namedArguments,
             bool hasErrors,
-            bool isConditionallyOmitted)
+            bool isOmitted)
         {
-            Debug.Assert(!isConditionallyOmitted || attributeClass is object && attributeClass.IsConditional);
+            Debug.Assert(!isOmitted || attributeClass is object && (attributeClass.IsConditional || !attributeClass.GetAttributeUsageInfo().AllowMultiple));
             Debug.Assert(!constructorArguments.IsDefault);
             Debug.Assert(!namedArguments.IsDefault);
             Debug.Assert(constructorArgumentsSourceIndices.IsDefault ||
@@ -48,7 +48,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             _constructorArguments = constructorArguments;
             _constructorArgumentsSourceIndices = constructorArgumentsSourceIndices;
             _namedArguments = namedArguments;
-            _isConditionallyOmitted = isConditionallyOmitted;
+            _isOmitted = isOmitted;
             _hasErrors = hasErrors;
             _applicationNode = applicationNode;
         }
@@ -62,7 +62,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             constructorArgumentsSourceIndices: default,
             namedArguments: ImmutableArray<KeyValuePair<string, TypedConstant>>.Empty,
             hasErrors: hasErrors,
-            isConditionallyOmitted: false)
+            isOmitted: false)
         {
         }
 
@@ -139,24 +139,24 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             }
         }
 
-        internal override bool IsConditionallyOmitted
+        internal override bool IsOmitted
         {
             get
             {
-                return _isConditionallyOmitted;
+                return _isOmitted;
             }
         }
 
-        internal SourceAttributeData WithOmittedCondition(bool isConditionallyOmitted)
+        internal SourceAttributeData WithOmitted(bool isOmitted)
         {
-            if (this.IsConditionallyOmitted == isConditionallyOmitted)
+            if (this.IsOmitted == isOmitted)
             {
                 return this;
             }
             else
             {
                 return new SourceAttributeData(this.ApplicationSyntaxReference, this.AttributeClass, this.AttributeConstructor, this.CommonConstructorArguments,
-                    this.ConstructorArgumentsSourceIndices, this.CommonNamedArguments, this.HasErrors, isConditionallyOmitted);
+                    this.ConstructorArgumentsSourceIndices, this.CommonNamedArguments, this.HasErrors, isOmitted);
             }
         }
 

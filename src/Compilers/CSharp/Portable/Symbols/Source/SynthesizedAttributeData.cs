@@ -22,7 +22,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             constructorArgumentsSourceIndices: default,
             namedArguments: namedArguments,
             hasErrors: false,
-            isConditionallyOmitted: false)
+            isOmitted: false)
         {
             Debug.Assert((object)wellKnownMember != null);
             Debug.Assert(!arguments.IsDefault);
@@ -38,7 +38,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             constructorArgumentsSourceIndices: original.ConstructorArgumentsSourceIndices,
             namedArguments: original.CommonNamedArguments,
             hasErrors: original.HasErrors,
-            isConditionallyOmitted: original.IsConditionallyOmitted)
+            isOmitted: original.IsOmitted)
         {
         }
     }

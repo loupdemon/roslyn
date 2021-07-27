@@ -698,7 +698,7 @@ Namespace Microsoft.CodeAnalysis.VisualBasic.Symbols.Retargeting
                                                     newAttributeCtor,
                                                     newCtorArguments,
                                                     newNamedArguments,
-                                                    oldAttribute.IsConditionallyOmitted,
+                                                    oldAttribute.IsOmitted,
                                                     oldAttribute.HasErrors)
             End Function
 

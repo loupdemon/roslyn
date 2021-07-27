@@ -236,6 +236,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         IDS_FeatureParameterlessStructConstructors = MessageBase + 12810,
         IDS_FeatureStructFieldInitializers = MessageBase + 12811,
         IDS_FeatureGenericAttributes = MessageBase + 12812,
+        IDS_FeatureRepeatedAttributesOnPartialMembers = MessageBase + 12813,
     }
 
     // Message IDs may refer to strings that need to be localized.
@@ -367,6 +368,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 case MessageID.IDS_FeatureParameterlessStructConstructors: // semantic check
                 case MessageID.IDS_FeatureStructFieldInitializers: // semantic check
                 case MessageID.IDS_FeatureGenericAttributes: // semantic check
+                case MessageID.IDS_FeatureRepeatedAttributesOnPartialMembers: // semantic check
                     return LanguageVersion.CSharp10;
 
                 // C# 9.0 features.

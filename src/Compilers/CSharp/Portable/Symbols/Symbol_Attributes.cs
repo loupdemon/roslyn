@@ -327,13 +327,13 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 // Bind attributes.
                 Binder.GetAttributes(binders, attributesToBind, boundAttributeTypes, attributesBuilder, diagnostics);
-                boundAttributes = attributesBuilder.AsImmutableOrNull();
 
                 // All attributes must be bound by now.
-                Debug.Assert(!boundAttributes.Any((attr) => attr == null));
+                Debug.Assert(!attributesBuilder.Any((attr) => attr == null));
 
                 // Validate attribute usage and Decode remaining well-known attributes.
-                wellKnownAttributeData = this.ValidateAttributeUsageAndDecodeWellKnownAttributes(binders, attributesToBind, boundAttributes, diagnostics, symbolPart);
+                wellKnownAttributeData = this.ValidateAttributeUsageAndDecodeWellKnownAttributes(binders, attributesToBind, attributesBuilder, diagnostics, symbolPart);
+                boundAttributes = attributesBuilder.AsImmutableOrNull();
 
                 // Store data decoded from remaining well-known attributes.
                 // TODO: what if this succeeds on another thread but not this thread?
@@ -622,7 +622,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         private WellKnownAttributeData ValidateAttributeUsageAndDecodeWellKnownAttributes(
             ImmutableArray<Binder> binders,
             ImmutableArray<AttributeSyntax> attributeSyntaxList,
-            ImmutableArray<CSharpAttributeData> boundAttributes,
+            CSharpAttributeData[] boundAttributes,
             BindingDiagnosticBag diagnostics,
             AttributeLocation symbolPart)
         {
@@ -633,7 +633,7 @@ namespace Microsoft.CodeAnalysis.CSharp
             Debug.Assert(attributeSyntaxList.Length == boundAttributes.Length);
 
             int totalAttributesCount = boundAttributes.Length;
-            HashSet<NamedTypeSymbol> uniqueAttributeTypes = new HashSet<NamedTypeSymbol>();
+            var uniqueAttributeTypes = PooledDictionary<NamedTypeSymbol, CSharpAttributeData>.GetInstance();
             var arguments = new DecodeWellKnownAttributeArguments<AttributeSyntax, CSharpAttributeData, AttributeLocation>();
             arguments.Diagnostics = diagnostics;
             arguments.AttributesCount = totalAttributesCount;
@@ -641,12 +641,12 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             for (int i = 0; i < totalAttributesCount; i++)
             {
-                CSharpAttributeData boundAttribute = boundAttributes[i];
+                var boundAttribute = boundAttributes[i];
                 AttributeSyntax attributeSyntax = attributeSyntaxList[i];
                 Binder binder = binders[i];
 
                 // Decode attribute as a possible well-known attribute only if it has no binding errors and has valid AttributeUsage.
-                if (!boundAttribute.HasErrors && ValidateAttributeUsage(boundAttribute, attributeSyntax, binder.Compilation, symbolPart, diagnostics, uniqueAttributeTypes))
+                if (!boundAttribute.HasErrors && ValidateAttributeUsage(ref boundAttribute, attributeSyntax, binder.Compilation, symbolPart, diagnostics, uniqueAttributeTypes))
                 {
                     arguments.Attribute = boundAttribute;
                     arguments.AttributeSyntaxOpt = attributeSyntax;
@@ -654,11 +654,15 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                     this.DecodeWellKnownAttribute(ref arguments);
                 }
+
+                boundAttributes[i] = boundAttribute;
             }
+            uniqueAttributeTypes.Free();
 
             return arguments.HasDecodedData ? arguments.DecodedData : null;
         }
 
+#nullable enable
         /// <summary>
         /// Validate attribute usage target and duplicate attributes.
         /// </summary>
@@ -669,12 +673,12 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <param name="diagnostics">Diagnostics</param>
         /// <param name="uniqueAttributeTypes">Set of unique attribute types applied to the symbol</param>
         private bool ValidateAttributeUsage(
-            CSharpAttributeData attribute,
+            ref CSharpAttributeData attribute,
             AttributeSyntax node,
             CSharpCompilation compilation,
             AttributeLocation symbolPart,
             BindingDiagnosticBag diagnostics,
-            HashSet<NamedTypeSymbol> uniqueAttributeTypes)
+            Dictionary<NamedTypeSymbol, CSharpAttributeData> uniqueAttributeTypes)
         {
             Debug.Assert(!attribute.HasErrors);
 
@@ -682,10 +686,37 @@ namespace Microsoft.CodeAnalysis.CSharp
             AttributeUsageInfo attributeUsageInfo = attributeType.GetAttributeUsageInfo();
 
             // Given attribute can't be specified more than once if AllowMultiple is false.
-            if (!uniqueAttributeTypes.Add(attributeType.OriginalDefinition) && !attributeUsageInfo.AllowMultiple)
+
+            if (!attributeUsageInfo.AllowMultiple)
             {
-                diagnostics.Add(ErrorCode.ERR_DuplicateAttribute, node.Name.Location, node.GetErrorDisplayName());
-                return false;
+                if (uniqueAttributeTypes.TryGetValue(attributeType.OriginalDefinition, out var existingAttribute))
+                {
+                    Debug.Assert(!existingAttribute.HasErrors);
+                    Debug.Assert(existingAttribute.ApplicationSyntaxReference is not null);
+                    Debug.Assert(attribute.ApplicationSyntaxReference is not null);
+                    var existingAppliedToMember = existingAttribute.ApplicationSyntaxReference.GetSyntax().Parent?.Parent;
+                    var appliedToMember = attribute.ApplicationSyntaxReference.GetSyntax().Parent?.Parent;
+                    // TODO: assert on what kinds of syntax we can see here?
+                    if (existingAppliedToMember == appliedToMember)
+                    {
+                        diagnostics.Add(ErrorCode.ERR_DuplicateAttribute, node.Name.Location, node.GetErrorDisplayName());
+                        return false;
+                    }
+
+                    MessageID.IDS_FeatureRepeatedAttributesOnPartialMembers.CheckFeatureAvailability(diagnostics, node.Name);
+                    attribute = ((SourceAttributeData)attribute).WithOmitted(true);
+                    if (!Enumerable.SequenceEqual(existingAttribute.ConstructorArguments, attribute.ConstructorArguments)
+                        || !Enumerable.SequenceEqual(existingAttribute.NamedArguments, attribute.NamedArguments)
+                        || !existingAttribute.AttributeConstructor.Equals(attribute.AttributeConstructor, TypeCompareKind.ConsiderEverything))
+                    {
+                        diagnostics.Add(ErrorCode.ERR_RepeatedAttributeArgumentDifference, node.Name.Location, node.GetErrorDisplayName(), this.ToDisplayString(SymbolDisplayFormat.CSharpShortErrorMessageFormat));
+                        return false;
+                    }
+                }
+                else
+                {
+                    uniqueAttributeTypes[attributeType.OriginalDefinition] = attribute;
+                }
             }
 
             // Verify if the attribute type can be applied to given owner symbol.
@@ -726,6 +757,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             return true;
         }
+#nullable disable
 
         /// <summary>
         /// Ensure that attributes are bound and the ObsoleteState of this symbol is known.
