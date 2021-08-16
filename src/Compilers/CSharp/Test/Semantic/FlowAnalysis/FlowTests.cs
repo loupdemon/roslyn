@@ -94,6 +94,176 @@ public class DATest : DATestBase {
 }";
 
         [Fact]
+        public void BaseClassHijinks()
+        {
+            var source0 = @"
+#nullable enable
+
+public class Base<T, U, V> { }
+";
+
+            var source1 = @"
+#nullable enable
+
+public partial class Derived1<T, U, V> : Base<
+#nullable disable
+    T,
+#nullable enable
+    U,
+#nullable enable
+    V> { }
+";
+
+            var source2 = @"
+#nullable enable
+
+public partial class Derived1<T, U, V> : Base<
+#nullable enable
+    T,
+#nullable disable
+    U,
+#nullable enable
+    V
+    > { }
+";
+            var comp = CreateCompilation(new[] { source0, source1 });
+            comp.VerifyDiagnostics();
+            var derived = comp.GetMember<NamedTypeSymbol>("Derived1");
+            var typeArgs = derived.BaseTypeNoUseSiteDiagnostics.TypeArgumentsWithAnnotationsNoUseSiteDiagnostics;
+            Assert.Equal(NullableAnnotation.Oblivious, typeArgs[0].NullableAnnotation);
+            Assert.Equal(NullableAnnotation.NotAnnotated, typeArgs[1].NullableAnnotation);
+            Assert.Equal(NullableAnnotation.NotAnnotated, typeArgs[2].NullableAnnotation);
+
+            comp = CreateCompilation(new[] { source0, source2 });
+            comp.VerifyDiagnostics();
+            derived = comp.GetMember<NamedTypeSymbol>("Derived1");
+            typeArgs = derived.BaseTypeNoUseSiteDiagnostics.TypeArgumentsWithAnnotationsNoUseSiteDiagnostics;
+            Assert.Equal(NullableAnnotation.NotAnnotated, typeArgs[0].NullableAnnotation);
+            Assert.Equal(NullableAnnotation.Oblivious, typeArgs[1].NullableAnnotation);
+            Assert.Equal(NullableAnnotation.NotAnnotated, typeArgs[2].NullableAnnotation);
+
+            comp = CreateCompilation(new[] { source0, source1, source2 });
+            comp.VerifyDiagnostics(
+                // (4,22): error CS0263: Partial declarations of 'Derived1<T, U, V>' must not specify different base classes
+                // public partial class Derived1<T, U, V> : Base<
+                Diagnostic(ErrorCode.ERR_PartialMultipleBases, "Derived1").WithArguments("Derived1<T, U, V>").WithLocation(4, 22)
+                );
+            derived = comp.GetMember<NamedTypeSymbol>("Derived1");
+            typeArgs = derived.BaseTypeNoUseSiteDiagnostics.TypeArgumentsWithAnnotationsNoUseSiteDiagnostics;
+            Assert.Equal(NullableAnnotation.Oblivious, typeArgs[0].NullableAnnotation);
+            Assert.Equal(NullableAnnotation.Oblivious, typeArgs[1].NullableAnnotation);
+            Assert.Equal(NullableAnnotation.Oblivious, typeArgs[2].NullableAnnotation);
+        }
+
+        [Fact]
+        public void PartialInterfaceHijinks()
+        {
+            var source0 = @"
+#nullable enable
+
+public interface Interface<T, U, V> { }
+";
+
+            var source1 = @"
+public partial class Derived1<T, U, V> : Interface<
+#nullable disable
+    T,
+#nullable enable
+    U,
+#nullable enable
+    V> { }
+";
+
+            var source2 = @"
+#nullable enable
+
+public partial class Derived1<T, U, V> : Interface<
+#nullable enable
+    T,
+#nullable disable
+    U,
+#nullable enable
+    V
+    > { }
+";
+            var source3 = @"
+#nullable enable
+
+M(new Derived1<object, object, object>());
+
+void M<T, U, V>(Derived1<T, U, V> d)
+{
+    Interface<T?, U, V> i = d;
+}
+";
+            var verifier = CompileAndVerify(new[] { source0, source1 }, symbolValidator: validate0);
+            verifier.VerifyDiagnostics();
+            void validate0(ModuleSymbol module)
+            {
+                var derived = module.GlobalNamespace.GetMember<NamedTypeSymbol>("Derived1");
+                Assert.Equal(1, derived.Interfaces().Length);
+                var typeArgs = derived.Interfaces()[0].TypeArgumentsWithAnnotationsNoUseSiteDiagnostics;
+                Assert.Equal(NullableAnnotation.Oblivious, typeArgs[0].NullableAnnotation);
+                Assert.Equal(NullableAnnotation.NotAnnotated, typeArgs[1].NullableAnnotation);
+                Assert.Equal(NullableAnnotation.NotAnnotated, typeArgs[2].NullableAnnotation);
+            }
+
+            verifier = CompileAndVerify(new[] { source0, source2 }, symbolValidator: validate1);
+            verifier.VerifyDiagnostics();
+            void validate1(ModuleSymbol module)
+            {
+                var derived = module.GlobalNamespace.GetMember<NamedTypeSymbol>("Derived1");
+                Assert.Equal(1, derived.Interfaces().Length);
+                var typeArgs = derived.Interfaces()[0].TypeArgumentsWithAnnotationsNoUseSiteDiagnostics;
+                Assert.Equal(NullableAnnotation.NotAnnotated, typeArgs[0].NullableAnnotation);
+                Assert.Equal(NullableAnnotation.Oblivious, typeArgs[1].NullableAnnotation);
+                Assert.Equal(NullableAnnotation.NotAnnotated, typeArgs[2].NullableAnnotation);
+            }
+
+            verifier = CompileAndVerify(new[] { source0, source1, source2 }, symbolValidator: validate0);
+            verifier.VerifyDiagnostics();
+
+            var comp = CreateCompilation(new[] { source0, source1, source2, source3 });
+            comp.VerifyDiagnostics();
+
+            verifier = CompileAndVerify(new[] { source0, source2, source1 }, symbolValidator: validate1);
+            verifier.VerifyDiagnostics();
+        }
+
+        [Fact]
+        public void PartialInterfaceHijinks_2()
+        {
+            var source0 = @"
+#nullable enable
+public interface I<T>
+{
+    public T M();
+}
+
+#nullable disable
+public partial class C : I<string> {
+
+#nullable enable
+    public string? M() {
+        return null;
+    }
+}
+
+public partial class C : I<string> {
+}
+
+";
+            var comp = CreateCompilation(source0);
+            comp.VerifyDiagnostics(
+                // (12,20): warning CS8766: Nullability of reference types in return type of 'string? C.M()' doesn't match implicitly implemented member 'string I<string>.M()' (possibly because of nullability attributes).
+                //     public string? M() {
+                Diagnostic(ErrorCode.WRN_TopLevelNullabilityMismatchInReturnTypeOnImplicitImplementation, "M").WithArguments("string? C.M()", "string I<string>.M()").WithLocation(12, 20));
+            var derived = comp.GetMember<NamedTypeSymbol>("C");
+            var typeArgs = derived.Interfaces()[0].TypeArgumentsWithAnnotationsNoUseSiteDiagnostics;
+            Assert.Equal(NullableAnnotation.Oblivious, typeArgs[0].NullableAnnotation);
+        }
+
+        [Fact]
         [WorkItem(35011, "https://github.com/dotnet/roslyn/issues/35011")]
         public void SwitchConstantUnreachable()
         {
