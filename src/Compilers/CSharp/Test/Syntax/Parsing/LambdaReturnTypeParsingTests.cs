@@ -3638,6 +3638,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         [Fact]
         public void Is_01()
         {
+            // PROTOTYPE(lambda-types): how should this parse?
             string source = "x is T () => { }";
             UsingExpression(source,
                 // (1,1): error CS1073: Unexpected token '=>'

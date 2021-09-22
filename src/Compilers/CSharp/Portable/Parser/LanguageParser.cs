@@ -1879,7 +1879,7 @@ tryAgain:
             try
             {
                 // first type
-                TypeSyntax firstType = this.ParseType();
+                TypeSyntax firstType = this.ParseType(ParseTypeMode.TrailingParenthesizedListIsNotLambdaType);
 
                 ArgumentListSyntax argumentList = null;
                 if (this.CurrentToken.Kind == SyntaxKind.OpenParenToken)
@@ -1901,7 +1901,7 @@ tryAgain:
                     else if (this.CurrentToken.Kind == SyntaxKind.CommaToken || this.IsPossibleType())
                     {
                         list.AddSeparator(this.EatToken(SyntaxKind.CommaToken));
-                        list.Add(_syntaxFactory.SimpleBaseType(this.ParseType()));
+                        list.Add(_syntaxFactory.SimpleBaseType(this.ParseType(ParseTypeMode.TrailingParenthesizedListIsNotLambdaType)));
                         continue;
                     }
                     else if (this.SkipBadBaseListTokens(ref colon, list, SyntaxKind.CommaToken) == PostSkipAction.Abort)
@@ -3258,11 +3258,11 @@ parse_member_name:;
             }
         }
 
-        private TypeSyntax ParseReturnType()
+        private TypeSyntax ParseReturnType(ParseTypeMode mode = ParseTypeMode.Normal)
         {
             var saveTerm = _termState;
             _termState |= TerminatorState.IsEndOfReturnType;
-            var type = this.ParseTypeOrVoid();
+            var type = this.ParseTypeOrVoid(mode);
             _termState = saveTerm;
             return type;
         }
@@ -3343,7 +3343,7 @@ parse_member_name:;
                 point = GetResetPoint();
 
                 bool couldBeParameterList = this.CurrentToken.Kind == SyntaxKind.OpenParenToken;
-                type = this.ParseType();
+                type = this.ParseType(ParseTypeMode.TrailingParenthesizedListIsNotLambdaType);
 
                 if (couldBeParameterList && type is TupleTypeSyntax { Elements: { Count: 2, SeparatorCount: 1 } } tupleType &&
                     tupleType.Elements.GetSeparator(0).IsMissing && tupleType.Elements[1].IsMissing &&
@@ -6586,6 +6586,10 @@ tryAgain:
             /// Might be a tuple type.
             /// </summary>
             TupleType,
+
+            // PROTOTYPE(lambda-types): we probably need to add this flag
+            // to disambiguate some error scenarios.
+            // LambdaType
         }
 
         private bool IsPossibleType()
@@ -6634,6 +6638,9 @@ tryAgain:
             Debug.Assert(mode != ParseTypeMode.NewExpression);
             ScanTypeFlags result;
             bool isFunctionPointer = false;
+            // PROTOTYPE(lambda-types): this feels a little obtuse. is there a more clear way to
+            // "bail out" var types from being the return of a lambda type?
+            bool isVar = this.CurrentToken.IsIdentifierVar();
 
             if (this.CurrentToken.Kind == SyntaxKind.RefKeyword)
             {
@@ -6795,6 +6802,33 @@ tryAgain:
                         isFunctionPointer = false;
                         result = ScanTypeFlags.MustBeType;
                         break;
+                    case SyntaxKind.OpenParenToken when !isVar:
+                        // possibly a lambda type.
+                        var lastTokenBeforeOpenParen = lastTokenOfType;
+                        var resetPoint = GetResetPoint();
+                        if (!ScanExplicitlyTypedLambdaParameterListNoReset(out lastTokenOfType, forLambdaType: true))
+                        {
+                            lastTokenOfType = lastTokenBeforeOpenParen;
+                            Reset(ref resetPoint);
+                            Release(ref resetPoint);
+                            return result;
+                        }
+                        else
+                        {
+                            Release(ref resetPoint);
+                        }
+
+                        if (mode == ParseTypeMode.TrailingParenthesizedListIsNotLambdaType && this.PeekToken(1).Kind != SyntaxKind.OpenParenToken)
+                        {
+                            // we are in a context where we expect e.g. `new SomeType();` where the
+                            // last parenthesized list in sequence is not part of the type.
+                            // since we didn't encounter an open paren to start the next list,
+                            // we assume that the paren'd list we just scanned is not part of the type.
+                            lastTokenOfType = lastTokenBeforeOpenParen;
+                            return result;
+                        }
+
+                        return ScanTypeFlags.NonGenericTypeOrExpression; // PROTOTYPE(lambda-types): what's the right flag here?
                     default:
                         goto done;
                 }
@@ -6979,7 +7013,7 @@ done:
             return ParseType();
         }
 
-        private TypeSyntax ParseTypeOrVoid()
+        private TypeSyntax ParseTypeOrVoid(ParseTypeMode mode = ParseTypeMode.Normal)
         {
             if (this.CurrentToken.Kind == SyntaxKind.VoidKeyword && this.PeekToken(1).Kind != SyntaxKind.AsteriskToken)
             {
@@ -6987,7 +7021,7 @@ done:
                 return _syntaxFactory.PredefinedType(this.EatToken());
             }
 
-            return this.ParseType();
+            return this.ParseType(mode);
         }
 
         private enum ParseTypeMode
@@ -7002,6 +7036,9 @@ done:
             AsExpression,
             NewExpression,
             FirstElementOfPossibleTupleLiteral,
+
+            // TODO: name. used for conversion operators and base lists so far.
+            TrailingParenthesizedListIsNotLambdaType
         }
 
         private TypeSyntax ParseType(ParseTypeMode mode = ParseTypeMode.Normal)
@@ -7050,6 +7087,7 @@ done:
                 case ParseTypeMode.Normal:
                 case ParseTypeMode.Parameter:
                 case ParseTypeMode.AfterRef:
+                case ParseTypeMode.TrailingParenthesizedListIsNotLambdaType:
                     nameOptions = NameOptions.None;
                     break;
                 default:
@@ -7109,6 +7147,7 @@ done:
                             case ParseTypeMode.AfterRef:
                             case ParseTypeMode.AsExpression:
                             case ParseTypeMode.NewExpression:
+                            case ParseTypeMode.TrailingParenthesizedListIsNotLambdaType:
                                 type = this.ParsePointerTypeMods(type);
                                 continue;
                         }
@@ -7132,6 +7171,42 @@ done:
                                 _pool.Free(ranks);
                             }
                             continue;
+                        }
+                    case SyntaxKind.OpenParenToken when shouldParseParameterList():
+                        {
+                            // PROTOTYPE(lambda-patterns): LangVersion
+                            type = _syntaxFactory.LambdaType(type, ParseLambdaParameterList());
+                            continue;
+
+                        }
+                        bool shouldParseParameterList()
+                        {
+                            if (mode is not (ParseTypeMode.TrailingParenthesizedListIsNotLambdaType or ParseTypeMode.NewExpression or ParseTypeMode.DefinitePattern)
+                                && type is { IsVar: false })
+                            {
+                                return true;
+                            }
+
+                            // Here we require that the "current" parameter list is directly
+                            // followed by a parenthesized list of some kind for us to parse this as
+                            // a parameter list for a lambda type.
+                            var resetPoint = this.GetResetPoint();
+                            try
+                            {
+                                var result = ScanExplicitlyTypedLambdaParameterListNoReset(out _, forLambdaType: true);
+                                // public static implicit operator int (int x)(C c) => x;
+                                // var x = new int (int x)();
+                                // var (x, y) = z;
+                                // case C(int x):
+                                // if we scan this parameter list and see a '(' afterward, we are good to keep going
+                                // if we see something else, we need to back off
+                                return result && CurrentToken.Kind == SyntaxKind.OpenParenToken;
+                            }
+                            finally
+                            {
+                                this.Reset(ref resetPoint);
+                                this.Release(ref resetPoint);
+                            }
                         }
                     default:
                         goto done; // token not consumed
@@ -11407,7 +11482,7 @@ tryAgain:
 
         private bool ScanParenthesizedLambda(Precedence precedence)
         {
-            return ScanParenthesizedImplicitlyTypedLambda(precedence) || ScanExplicitlyTypedLambda(precedence);
+            return ScanParenthesizedImplicitlyTypedLambda(precedence) || ScanExplicitlyTypedLambdaParameterList(precedence);
         }
 
         private bool ScanParenthesizedImplicitlyTypedLambda(Precedence precedence)
@@ -11471,7 +11546,90 @@ tryAgain:
             return false;
         }
 
-        private bool ScanExplicitlyTypedLambda(Precedence precedence)
+        private bool ScanExplicitlyTypedLambdaParameterListNoReset(out SyntaxToken lastToken, bool forLambdaType)
+        {
+            Debug.Assert(CurrentToken.Kind == SyntaxKind.OpenParenToken);
+
+            lastToken = default;
+
+            // Do we have the following, where the attributes, modifier, and type are
+            // optional? If so then parse it as a lambda.
+            //   (attributes modifier T x [, ...]) =>
+            //
+            // It's not sufficient to assume this is a lambda expression if we see a
+            // modifier such as `(ref x,` because the caller of this method may have
+            // scanned past a preceding identifier, and `F (ref x,` might be a call to
+            // method F rather than a lambda expression with return type F.
+            // Instead, we need to scan to `=>`.
+
+            while (true)
+            {
+                // Advance past the open paren or comma.
+                var token = this.EatToken();
+                // PROTOTYPE(lambda-types): this is a bit hacky
+                if (token.Kind == SyntaxKind.OpenParenToken && CurrentToken.Kind == SyntaxKind.CloseParenToken)
+                {
+                    lastToken = EatToken();
+                    return forLambdaType
+                        ? this.CurrentToken.Kind != SyntaxKind.EqualsGreaterThanToken
+                        : this.CurrentToken.Kind == SyntaxKind.EqualsGreaterThanToken;
+                }
+
+                _ = ParseAttributeDeclarations();
+
+                // Eat 'out', 'ref', and 'in'. Even though not allowed in a lambda,
+                // we treat `params` similarly for better error recovery.
+                switch (this.CurrentToken.Kind)
+                {
+                    case SyntaxKind.RefKeyword:
+                        this.EatToken();
+                        if (this.CurrentToken.Kind == SyntaxKind.ReadOnlyKeyword)
+                        {
+                            this.EatToken();
+                        }
+                        break;
+                    case SyntaxKind.OutKeyword:
+                    case SyntaxKind.InKeyword:
+                    case SyntaxKind.ParamsKeyword:
+                        this.EatToken();
+                        break;
+                }
+
+                // PROTOTYPE(lambda-types): this doesn't tolerate empty parameter lists. why?
+                // NOTE: advances CurrentToken
+                if (this.ScanType() == ScanTypeFlags.NotType)
+                {
+                    return false;
+                }
+
+                if (this.IsTrueIdentifier())
+                {
+                    // eat the identifier
+                    this.EatToken();
+                }
+
+                switch (this.CurrentToken.Kind)
+                {
+                    case SyntaxKind.CommaToken:
+                        continue;
+
+                    case SyntaxKind.CloseParenToken:
+                        lastToken = this.EatToken();
+                        // if we're parsing this list for a lambda type, we want to *reject* it if
+                        // we find it followed by `=>`--since is actuall just a lambda with an
+                        // explicit return type. otherwise, we are parsing this for a lambda
+                        // expression, and we want to only accept it if it is followed by a `=>`.
+                        return forLambdaType
+                            ? this.CurrentToken.Kind != SyntaxKind.EqualsGreaterThanToken
+                            : this.CurrentToken.Kind == SyntaxKind.EqualsGreaterThanToken;
+
+                    default:
+                        return false;
+                }
+            }
+        }
+
+        private bool ScanExplicitlyTypedLambdaParameterList(Precedence precedence)
         {
             Debug.Assert(CurrentToken.Kind == SyntaxKind.OpenParenToken);
 
@@ -11483,65 +11641,7 @@ tryAgain:
             var resetPoint = this.GetResetPoint();
             try
             {
-                // Do we have the following, where the attributes, modifier, and type are
-                // optional? If so then parse it as a lambda.
-                //   (attributes modifier T x [, ...]) =>
-                //
-                // It's not sufficient to assume this is a lambda expression if we see a
-                // modifier such as `(ref x,` because the caller of this method may have
-                // scanned past a preceding identifier, and `F (ref x,` might be a call to
-                // method F rather than a lambda expression with return type F.
-                // Instead, we need to scan to `=>`.
-
-                while (true)
-                {
-                    // Advance past the open paren or comma.
-                    this.EatToken();
-
-                    _ = ParseAttributeDeclarations();
-
-                    // Eat 'out', 'ref', and 'in'. Even though not allowed in a lambda,
-                    // we treat `params` similarly for better error recovery.
-                    switch (this.CurrentToken.Kind)
-                    {
-                        case SyntaxKind.RefKeyword:
-                            this.EatToken();
-                            if (this.CurrentToken.Kind == SyntaxKind.ReadOnlyKeyword)
-                            {
-                                this.EatToken();
-                            }
-                            break;
-                        case SyntaxKind.OutKeyword:
-                        case SyntaxKind.InKeyword:
-                        case SyntaxKind.ParamsKeyword:
-                            this.EatToken();
-                            break;
-                    }
-
-                    // NOTE: advances CurrentToken
-                    if (this.ScanType() == ScanTypeFlags.NotType)
-                    {
-                        return false;
-                    }
-
-                    if (this.IsTrueIdentifier())
-                    {
-                        // eat the identifier
-                        this.EatToken();
-                    }
-
-                    switch (this.CurrentToken.Kind)
-                    {
-                        case SyntaxKind.CommaToken:
-                            continue;
-
-                        case SyntaxKind.CloseParenToken:
-                            return this.PeekToken(1).Kind == SyntaxKind.EqualsGreaterThanToken;
-
-                        default:
-                            return false;
-                    }
-                }
+                return ScanExplicitlyTypedLambdaParameterListNoReset(out _, forLambdaType: false);
             }
             finally
             {
@@ -11830,7 +11930,7 @@ tryAgain:
                 var nestedResetPoint = this.GetResetPoint();
                 try
                 {
-                    var st = ScanType();
+                    var st = ScanType(ParseTypeMode.TrailingParenthesizedListIsNotLambdaType, out _);
                     if (st == ScanTypeFlags.NotType || this.CurrentToken.Kind != SyntaxKind.OpenParenToken)
                     {
                         this.Reset(ref nestedResetPoint);
@@ -12587,7 +12687,7 @@ tryAgain:
         private ExpressionSyntax ParseRegularStackAllocExpression()
         {
             var @stackalloc = this.EatToken(SyntaxKind.StackAllocKeyword);
-            var elementType = this.ParseType();
+            var elementType = this.ParseType(ParseTypeMode.TrailingParenthesizedListIsNotLambdaType);
             InitializerExpressionSyntax initializer = null;
             if (this.CurrentToken.Kind == SyntaxKind.OpenBraceToken)
             {
@@ -12747,7 +12847,7 @@ tryAgain:
                 var resetPoint = this.GetResetPoint();
                 try
                 {
-                    returnType = ParseReturnType();
+                    returnType = ParseReturnType(ParseTypeMode.TrailingParenthesizedListIsNotLambdaType);
                     if (CurrentToken.Kind != SyntaxKind.OpenParenToken)
                     {
                         this.Reset(ref resetPoint);

@@ -113,5 +113,11 @@ namespace Microsoft.CodeAnalysis
         /// Method represents the signature of a function pointer type.
         /// </summary>
         FunctionPointerSignature = 18,
+
+        /// <summary>
+        /// Method represents the signature of a lambda type.
+        /// </summary>
+        LambdaTypeMethod = 19,
+
     }
 }

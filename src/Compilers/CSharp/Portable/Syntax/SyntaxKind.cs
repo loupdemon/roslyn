@@ -862,5 +862,7 @@ namespace Microsoft.CodeAnalysis.CSharp
         ExpressionColon = 9069,
         LineDirectivePosition = 9070,
         LineSpanDirectiveTrivia = 9071,
+
+        LambdaType = 9999, // PROTOTYPE(lambda-types): assign a reasonable constant here
     }
 }

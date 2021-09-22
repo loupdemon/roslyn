@@ -268,6 +268,7 @@ class C
     }
 }
 ");
+            // PROTOTYPE(lambda-types): can we do a better error recovery parse here?
             N(SyntaxKind.CompilationUnit);
             {
                 N(SyntaxKind.ClassDeclaration);
@@ -296,26 +297,30 @@ class C
                                 N(SyntaxKind.UsingKeyword);
                                 N(SyntaxKind.VariableDeclaration);
                                 {
-                                    N(SyntaxKind.IdentifierName);
+                                    N(SyntaxKind.LambdaType);
                                     {
-                                        N(SyntaxKind.IdentifierToken, "await");
-                                    }
-                                    N(SyntaxKind.VariableDeclarator);
-                                    {
-                                        M(SyntaxKind.IdentifierToken);
-                                        N(SyntaxKind.BracketedArgumentList);
+                                        N(SyntaxKind.IdentifierName);
                                         {
-                                            M(SyntaxKind.OpenBracketToken);
-                                            N(SyntaxKind.Argument);
-                                            {
-                                                N(SyntaxKind.ThisExpression);
-                                                {
-                                                    N(SyntaxKind.ThisKeyword);
-                                                }
-                                            }
-                                            M(SyntaxKind.CloseBracketToken);
+                                            N(SyntaxKind.IdentifierToken, "await");
+                                        }
+                                        N(SyntaxKind.ParameterList);
+                                        {
+                                            N(SyntaxKind.OpenParenToken);
+                                            M(SyntaxKind.CloseParenToken);
                                         }
                                     }
+                                    M(SyntaxKind.VariableDeclarator);
+                                    {
+                                        M(SyntaxKind.IdentifierToken);
+                                    }
+                                }
+                                M(SyntaxKind.SemicolonToken);
+                            }
+                            N(SyntaxKind.ExpressionStatement);
+                            {
+                                N(SyntaxKind.ThisExpression);
+                                {
+                                    N(SyntaxKind.ThisKeyword);
                                 }
                                 M(SyntaxKind.SemicolonToken);
                             }

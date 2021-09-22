@@ -19,6 +19,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         [Fact, WorkItem(52543, "https://github.com/dotnet/roslyn/issues/52543")]
         public void TestNormalizePatternInIf()
         {
+            // PROTOTYPE(lambda-types): why did normalization change here?
             TestNormalizeStatement(
                 @"{object x = 1;
                 if (x is {})

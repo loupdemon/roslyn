@@ -747,6 +747,16 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
                             break;
                         }
 
+                    case TypeKind.LambdaType:
+                        {
+                            var result = visitLambdaType((LambdaTypeSymbol)current, typeWithAnnotationsPredicate, typePredicate, arg, useDefaultType, canDigThroughNullable, out next);
+                            if (result is object)
+                            {
+                                return result;
+                            }
+                            break;
+                        }
+
                     default:
                         throw ExceptionUtilities.UnexpectedValue(current.TypeKind);
                 }
@@ -762,6 +772,53 @@ namespace Microsoft.CodeAnalysis.CSharp.Symbols
             static TypeSymbol? visitFunctionPointerType(FunctionPointerTypeSymbol type, Func<TypeWithAnnotations, T, bool, bool>? typeWithAnnotationsPredicate, Func<TypeSymbol, T, bool, bool>? typePredicate, T arg, bool useDefaultType, bool canDigThroughNullable, out TypeWithAnnotations next)
             {
                 MethodSymbol currentPointer = type.Signature;
+                if (currentPointer.ParameterCount == 0)
+                {
+                    next = currentPointer.ReturnTypeWithAnnotations;
+                    return null;
+                }
+
+                var result = VisitType(
+                    typeWithAnnotationsOpt: canDigThroughNullable ? default : currentPointer.ReturnTypeWithAnnotations,
+                    type: canDigThroughNullable ? currentPointer.ReturnTypeWithAnnotations.NullableUnderlyingTypeOrSelf : null,
+                    typeWithAnnotationsPredicate,
+                    typePredicate,
+                    arg,
+                    canDigThroughNullable,
+                    useDefaultType);
+                if (result is object)
+                {
+                    next = default;
+                    return result;
+                }
+
+                int i;
+                for (i = 0; i < currentPointer.ParameterCount - 1; i++)
+                {
+                    (TypeWithAnnotations nextTypeWithAnnotations, TypeSymbol? nextType) = getNextIterationElements(currentPointer.Parameters[i].TypeWithAnnotations, canDigThroughNullable);
+                    result = VisitType(
+                        typeWithAnnotationsOpt: nextTypeWithAnnotations,
+                        type: nextType,
+                        typeWithAnnotationsPredicate,
+                        typePredicate,
+                        arg,
+                        canDigThroughNullable,
+                        useDefaultType);
+                    if (result is object)
+                    {
+                        next = default;
+                        return result;
+                    }
+                }
+
+                next = currentPointer.Parameters[i].TypeWithAnnotations;
+                return null;
+            }
+
+            // PROTOTYPE(lambda-types): maybe can factor out part of 'visitFunctionPointerType'
+            static TypeSymbol? visitLambdaType(LambdaTypeSymbol type, Func<TypeWithAnnotations, T, bool, bool>? typeWithAnnotationsPredicate, Func<TypeSymbol, T, bool, bool>? typePredicate, T arg, bool useDefaultType, bool canDigThroughNullable, out TypeWithAnnotations next)
+            {
+                MethodSymbol currentPointer = type.MethodSymbol;
                 if (currentPointer.ParameterCount == 0)
                 {
                     next = currentPointer.ReturnTypeWithAnnotations;

@@ -6351,6 +6351,109 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         }
     }
 
+    /// <summary>Class which represents the syntax node for a lambda type.</summary>
+    internal sealed partial class LambdaTypeSyntax : TypeSyntax
+    {
+        internal readonly TypeSyntax returnType;
+        internal readonly ParameterListSyntax parameterList;
+
+        internal LambdaTypeSyntax(SyntaxKind kind, TypeSyntax returnType, ParameterListSyntax parameterList, DiagnosticInfo[]? diagnostics, SyntaxAnnotation[]? annotations)
+          : base(kind, diagnostics, annotations)
+        {
+            this.SlotCount = 2;
+            this.AdjustFlagsAndWidth(returnType);
+            this.returnType = returnType;
+            this.AdjustFlagsAndWidth(parameterList);
+            this.parameterList = parameterList;
+        }
+
+        internal LambdaTypeSyntax(SyntaxKind kind, TypeSyntax returnType, ParameterListSyntax parameterList, SyntaxFactoryContext context)
+          : base(kind)
+        {
+            this.SetFactoryContext(context);
+            this.SlotCount = 2;
+            this.AdjustFlagsAndWidth(returnType);
+            this.returnType = returnType;
+            this.AdjustFlagsAndWidth(parameterList);
+            this.parameterList = parameterList;
+        }
+
+        internal LambdaTypeSyntax(SyntaxKind kind, TypeSyntax returnType, ParameterListSyntax parameterList)
+          : base(kind)
+        {
+            this.SlotCount = 2;
+            this.AdjustFlagsAndWidth(returnType);
+            this.returnType = returnType;
+            this.AdjustFlagsAndWidth(parameterList);
+            this.parameterList = parameterList;
+        }
+
+        /// <summary>TypeSyntax representing the return type of the lambda type.</summary>
+        public TypeSyntax ReturnType => this.returnType;
+        /// <summary>ParameterListSyntax node representing the list of parameters for the lambda type.</summary>
+        public ParameterListSyntax ParameterList => this.parameterList;
+
+        internal override GreenNode? GetSlot(int index)
+            => index switch
+            {
+                0 => this.returnType,
+                1 => this.parameterList,
+                _ => null,
+            };
+
+        internal override SyntaxNode CreateRed(SyntaxNode? parent, int position) => new CSharp.Syntax.LambdaTypeSyntax(this, parent, position);
+
+        public override void Accept(CSharpSyntaxVisitor visitor) => visitor.VisitLambdaType(this);
+        public override TResult Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) => visitor.VisitLambdaType(this);
+
+        public LambdaTypeSyntax Update(TypeSyntax returnType, ParameterListSyntax parameterList)
+        {
+            if (returnType != this.ReturnType || parameterList != this.ParameterList)
+            {
+                var newNode = SyntaxFactory.LambdaType(returnType, parameterList);
+                var diags = GetDiagnostics();
+                if (diags?.Length > 0)
+                    newNode = newNode.WithDiagnosticsGreen(diags);
+                var annotations = GetAnnotations();
+                if (annotations?.Length > 0)
+                    newNode = newNode.WithAnnotationsGreen(annotations);
+                return newNode;
+            }
+
+            return this;
+        }
+
+        internal override GreenNode SetDiagnostics(DiagnosticInfo[]? diagnostics)
+            => new LambdaTypeSyntax(this.Kind, this.returnType, this.parameterList, diagnostics, GetAnnotations());
+
+        internal override GreenNode SetAnnotations(SyntaxAnnotation[]? annotations)
+            => new LambdaTypeSyntax(this.Kind, this.returnType, this.parameterList, GetDiagnostics(), annotations);
+
+        internal LambdaTypeSyntax(ObjectReader reader)
+          : base(reader)
+        {
+            this.SlotCount = 2;
+            var returnType = (TypeSyntax)reader.ReadValue();
+            AdjustFlagsAndWidth(returnType);
+            this.returnType = returnType;
+            var parameterList = (ParameterListSyntax)reader.ReadValue();
+            AdjustFlagsAndWidth(parameterList);
+            this.parameterList = parameterList;
+        }
+
+        internal override void WriteTo(ObjectWriter writer)
+        {
+            base.WriteTo(writer);
+            writer.WriteValue(this.returnType);
+            writer.WriteValue(this.parameterList);
+        }
+
+        static LambdaTypeSyntax()
+        {
+            ObjectBinder.RegisterTypeReader(typeof(LambdaTypeSyntax), r => new LambdaTypeSyntax(r));
+        }
+    }
+
     /// <summary>Provides the base class from which the classes that represent lambda expressions are derived.</summary>
     internal abstract partial class LambdaExpressionSyntax : AnonymousFunctionExpressionSyntax
     {
@@ -33932,6 +34035,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         public virtual TResult VisitDeclarationExpression(DeclarationExpressionSyntax node) => this.DefaultVisit(node);
         public virtual TResult VisitCastExpression(CastExpressionSyntax node) => this.DefaultVisit(node);
         public virtual TResult VisitAnonymousMethodExpression(AnonymousMethodExpressionSyntax node) => this.DefaultVisit(node);
+        public virtual TResult VisitLambdaType(LambdaTypeSyntax node) => this.DefaultVisit(node);
         public virtual TResult VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => this.DefaultVisit(node);
         public virtual TResult VisitRefExpression(RefExpressionSyntax node) => this.DefaultVisit(node);
         public virtual TResult VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => this.DefaultVisit(node);
@@ -34171,6 +34275,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
         public virtual void VisitDeclarationExpression(DeclarationExpressionSyntax node) => this.DefaultVisit(node);
         public virtual void VisitCastExpression(CastExpressionSyntax node) => this.DefaultVisit(node);
         public virtual void VisitAnonymousMethodExpression(AnonymousMethodExpressionSyntax node) => this.DefaultVisit(node);
+        public virtual void VisitLambdaType(LambdaTypeSyntax node) => this.DefaultVisit(node);
         public virtual void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => this.DefaultVisit(node);
         public virtual void VisitRefExpression(RefExpressionSyntax node) => this.DefaultVisit(node);
         public virtual void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node) => this.DefaultVisit(node);
@@ -34515,6 +34620,9 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 
         public override CSharpSyntaxNode VisitAnonymousMethodExpression(AnonymousMethodExpressionSyntax node)
             => node.Update(VisitList(node.Modifiers), (SyntaxToken)Visit(node.DelegateKeyword), (ParameterListSyntax)Visit(node.ParameterList), (BlockSyntax)Visit(node.Block), (ExpressionSyntax)Visit(node.ExpressionBody));
+
+        public override CSharpSyntaxNode VisitLambdaType(LambdaTypeSyntax node)
+            => node.Update((TypeSyntax)Visit(node.ReturnType), (ParameterListSyntax)Visit(node.ParameterList));
 
         public override CSharpSyntaxNode VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node)
             => node.Update(VisitList(node.AttributeLists), VisitList(node.Modifiers), (ParameterSyntax)Visit(node.Parameter), (SyntaxToken)Visit(node.ArrowToken), (BlockSyntax)Visit(node.Block), (ExpressionSyntax)Visit(node.ExpressionBody));
@@ -36325,6 +36433,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
 #endif
 
             return new AnonymousMethodExpressionSyntax(SyntaxKind.AnonymousMethodExpression, modifiers.Node, delegateKeyword, parameterList, block, expressionBody, this.context);
+        }
+
+        public LambdaTypeSyntax LambdaType(TypeSyntax returnType, ParameterListSyntax parameterList)
+        {
+#if DEBUG
+            if (returnType == null) throw new ArgumentNullException(nameof(returnType));
+            if (parameterList == null) throw new ArgumentNullException(nameof(parameterList));
+#endif
+
+            int hash;
+            var cached = CSharpSyntaxNodeCache.TryGetNode((int)SyntaxKind.LambdaType, returnType, parameterList, this.context, out hash);
+            if (cached != null) return (LambdaTypeSyntax)cached;
+
+            var result = new LambdaTypeSyntax(SyntaxKind.LambdaType, returnType, parameterList, this.context);
+            if (hash >= 0)
+            {
+                SyntaxNodeCache.AddNode(result, hash);
+            }
+
+            return result;
         }
 
         public SimpleLambdaExpressionSyntax SimpleLambdaExpression(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<SyntaxToken> modifiers, ParameterSyntax parameter, SyntaxToken arrowToken, BlockSyntax? block, ExpressionSyntax? expressionBody)
@@ -41300,6 +41428,26 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
             return new AnonymousMethodExpressionSyntax(SyntaxKind.AnonymousMethodExpression, modifiers.Node, delegateKeyword, parameterList, block, expressionBody);
         }
 
+        public static LambdaTypeSyntax LambdaType(TypeSyntax returnType, ParameterListSyntax parameterList)
+        {
+#if DEBUG
+            if (returnType == null) throw new ArgumentNullException(nameof(returnType));
+            if (parameterList == null) throw new ArgumentNullException(nameof(parameterList));
+#endif
+
+            int hash;
+            var cached = SyntaxNodeCache.TryGetNode((int)SyntaxKind.LambdaType, returnType, parameterList, out hash);
+            if (cached != null) return (LambdaTypeSyntax)cached;
+
+            var result = new LambdaTypeSyntax(SyntaxKind.LambdaType, returnType, parameterList);
+            if (hash >= 0)
+            {
+                SyntaxNodeCache.AddNode(result, hash);
+            }
+
+            return result;
+        }
+
         public static SimpleLambdaExpressionSyntax SimpleLambdaExpression(Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<AttributeListSyntax> attributeLists, Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<SyntaxToken> modifiers, ParameterSyntax parameter, SyntaxToken arrowToken, BlockSyntax? block, ExpressionSyntax? expressionBody)
         {
 #if DEBUG
@@ -45069,6 +45217,7 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax.InternalSyntax
                 typeof(DeclarationExpressionSyntax),
                 typeof(CastExpressionSyntax),
                 typeof(AnonymousMethodExpressionSyntax),
+                typeof(LambdaTypeSyntax),
                 typeof(SimpleLambdaExpressionSyntax),
                 typeof(RefExpressionSyntax),
                 typeof(ParenthesizedLambdaExpressionSyntax),

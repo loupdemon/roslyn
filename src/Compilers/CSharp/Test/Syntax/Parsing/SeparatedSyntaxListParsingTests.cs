@@ -323,86 +323,56 @@ class M<,> { }
                     N(SyntaxKind.IncompleteMember);
                     {
                         N(SyntaxKind.NewKeyword);
-                        N(SyntaxKind.GenericName);
+                        N(SyntaxKind.LambdaType);
                         {
-                            N(SyntaxKind.IdentifierToken, "C");
-                            N(SyntaxKind.TypeArgumentList);
+                            N(SyntaxKind.GenericName);
                             {
-                                N(SyntaxKind.LessThanToken);
-                                N(SyntaxKind.OmittedTypeArgument);
+                                N(SyntaxKind.IdentifierToken, "C");
+                                N(SyntaxKind.TypeArgumentList);
                                 {
-                                    N(SyntaxKind.OmittedTypeArgumentToken);
-                                }
-                                N(SyntaxKind.GreaterThanToken);
-                            }
-                        }
-                    }
-                    N(SyntaxKind.IncompleteMember);
-                    {
-                        N(SyntaxKind.TupleType);
-                        {
-                            N(SyntaxKind.OpenParenToken);
-                            M(SyntaxKind.TupleElement);
-                            {
-                                M(SyntaxKind.IdentifierName);
-                                {
-                                    M(SyntaxKind.IdentifierToken);
+                                    N(SyntaxKind.LessThanToken);
+                                    N(SyntaxKind.OmittedTypeArgument);
+                                    {
+                                        N(SyntaxKind.OmittedTypeArgumentToken);
+                                    }
+                                    N(SyntaxKind.GreaterThanToken);
                                 }
                             }
-                            M(SyntaxKind.CommaToken);
-                            M(SyntaxKind.TupleElement);
+                            N(SyntaxKind.ParameterList);
                             {
-                                M(SyntaxKind.IdentifierName);
-                                {
-                                    M(SyntaxKind.IdentifierToken);
-                                }
+                                N(SyntaxKind.OpenParenToken);
+                                N(SyntaxKind.CloseParenToken);
                             }
-                            N(SyntaxKind.CloseParenToken);
                         }
                     }
                     N(SyntaxKind.IncompleteMember);
                     {
                         N(SyntaxKind.NewKeyword);
-                        N(SyntaxKind.GenericName);
+                        N(SyntaxKind.LambdaType);
                         {
-                            N(SyntaxKind.IdentifierToken, "C");
-                            N(SyntaxKind.TypeArgumentList);
+                            N(SyntaxKind.GenericName);
                             {
-                                N(SyntaxKind.LessThanToken);
-                                N(SyntaxKind.OmittedTypeArgument);
+                                N(SyntaxKind.IdentifierToken, "C");
+                                N(SyntaxKind.TypeArgumentList);
                                 {
-                                    N(SyntaxKind.OmittedTypeArgumentToken);
-                                }
-                                N(SyntaxKind.CommaToken);
-                                N(SyntaxKind.OmittedTypeArgument);
-                                {
-                                    N(SyntaxKind.OmittedTypeArgumentToken);
-                                }
-                                N(SyntaxKind.GreaterThanToken);
-                            }
-                        }
-                    }
-                    N(SyntaxKind.IncompleteMember);
-                    {
-                        N(SyntaxKind.TupleType);
-                        {
-                            N(SyntaxKind.OpenParenToken);
-                            M(SyntaxKind.TupleElement);
-                            {
-                                M(SyntaxKind.IdentifierName);
-                                {
-                                    M(SyntaxKind.IdentifierToken);
+                                    N(SyntaxKind.LessThanToken);
+                                    N(SyntaxKind.OmittedTypeArgument);
+                                    {
+                                        N(SyntaxKind.OmittedTypeArgumentToken);
+                                    }
+                                    N(SyntaxKind.CommaToken);
+                                    N(SyntaxKind.OmittedTypeArgument);
+                                    {
+                                        N(SyntaxKind.OmittedTypeArgumentToken);
+                                    }
+                                    N(SyntaxKind.GreaterThanToken);
                                 }
                             }
-                            M(SyntaxKind.CommaToken);
-                            M(SyntaxKind.TupleElement);
+                            N(SyntaxKind.ParameterList);
                             {
-                                M(SyntaxKind.IdentifierName);
-                                {
-                                    M(SyntaxKind.IdentifierToken);
-                                }
+                                N(SyntaxKind.OpenParenToken);
+                                N(SyntaxKind.CloseParenToken);
                             }
-                            N(SyntaxKind.CloseParenToken);
                         }
                     }
                     N(SyntaxKind.FieldDeclaration);

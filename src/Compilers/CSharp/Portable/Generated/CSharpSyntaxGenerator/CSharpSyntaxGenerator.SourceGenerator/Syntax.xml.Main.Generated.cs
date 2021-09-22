@@ -174,6 +174,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>Called when the visitor visits a AnonymousMethodExpressionSyntax node.</summary>
         public virtual TResult? VisitAnonymousMethodExpression(AnonymousMethodExpressionSyntax node) => this.DefaultVisit(node);
 
+        /// <summary>Called when the visitor visits a LambdaTypeSyntax node.</summary>
+        public virtual TResult? VisitLambdaType(LambdaTypeSyntax node) => this.DefaultVisit(node);
+
         /// <summary>Called when the visitor visits a SimpleLambdaExpressionSyntax node.</summary>
         public virtual TResult? VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => this.DefaultVisit(node);
 
@@ -882,6 +885,9 @@ namespace Microsoft.CodeAnalysis.CSharp
         /// <summary>Called when the visitor visits a AnonymousMethodExpressionSyntax node.</summary>
         public virtual void VisitAnonymousMethodExpression(AnonymousMethodExpressionSyntax node) => this.DefaultVisit(node);
 
+        /// <summary>Called when the visitor visits a LambdaTypeSyntax node.</summary>
+        public virtual void VisitLambdaType(LambdaTypeSyntax node) => this.DefaultVisit(node);
+
         /// <summary>Called when the visitor visits a SimpleLambdaExpressionSyntax node.</summary>
         public virtual void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node) => this.DefaultVisit(node);
 
@@ -1589,6 +1595,9 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         public override SyntaxNode? VisitAnonymousMethodExpression(AnonymousMethodExpressionSyntax node)
             => node.Update(VisitList(node.Modifiers), VisitToken(node.DelegateKeyword), (ParameterListSyntax?)Visit(node.ParameterList), (BlockSyntax?)Visit(node.Block) ?? throw new ArgumentNullException("block"), (ExpressionSyntax?)Visit(node.ExpressionBody));
+
+        public override SyntaxNode? VisitLambdaType(LambdaTypeSyntax node)
+            => node.Update((TypeSyntax?)Visit(node.ReturnType) ?? throw new ArgumentNullException("returnType"), (ParameterListSyntax?)Visit(node.ParameterList) ?? throw new ArgumentNullException("parameterList"));
 
         public override SyntaxNode? VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node)
             => node.Update(VisitList(node.AttributeLists), VisitList(node.Modifiers), (ParameterSyntax?)Visit(node.Parameter) ?? throw new ArgumentNullException("parameter"), VisitToken(node.ArrowToken), (BlockSyntax?)Visit(node.Block), (ExpressionSyntax?)Visit(node.ExpressionBody));
@@ -3089,6 +3098,18 @@ namespace Microsoft.CodeAnalysis.CSharp
             if (block == null) throw new ArgumentNullException(nameof(block));
             return (AnonymousMethodExpressionSyntax)Syntax.InternalSyntax.SyntaxFactory.AnonymousMethodExpression(modifiers.Node.ToGreenList<Syntax.InternalSyntax.SyntaxToken>(), (Syntax.InternalSyntax.SyntaxToken)delegateKeyword.Node!, parameterList == null ? null : (Syntax.InternalSyntax.ParameterListSyntax)parameterList.Green, (Syntax.InternalSyntax.BlockSyntax)block.Green, expressionBody == null ? null : (Syntax.InternalSyntax.ExpressionSyntax)expressionBody.Green).CreateRed();
         }
+
+        /// <summary>Creates a new LambdaTypeSyntax instance.</summary>
+        public static LambdaTypeSyntax LambdaType(TypeSyntax returnType, ParameterListSyntax parameterList)
+        {
+            if (returnType == null) throw new ArgumentNullException(nameof(returnType));
+            if (parameterList == null) throw new ArgumentNullException(nameof(parameterList));
+            return (LambdaTypeSyntax)Syntax.InternalSyntax.SyntaxFactory.LambdaType((Syntax.InternalSyntax.TypeSyntax)returnType.Green, (Syntax.InternalSyntax.ParameterListSyntax)parameterList.Green).CreateRed();
+        }
+
+        /// <summary>Creates a new LambdaTypeSyntax instance.</summary>
+        public static LambdaTypeSyntax LambdaType(TypeSyntax returnType)
+            => SyntaxFactory.LambdaType(returnType, SyntaxFactory.ParameterList());
 
         /// <summary>Creates a new SimpleLambdaExpressionSyntax instance.</summary>
         public static SimpleLambdaExpressionSyntax SimpleLambdaExpression(SyntaxList<AttributeListSyntax> attributeLists, SyntaxTokenList modifiers, ParameterSyntax parameter, SyntaxToken arrowToken, BlockSyntax? block, ExpressionSyntax? expressionBody)

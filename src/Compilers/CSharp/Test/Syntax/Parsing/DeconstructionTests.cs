@@ -1130,6 +1130,7 @@ class C
         (Int32 x, var (y, z)) = goo;
     }
 }", options: TestOptions.Regular.WithTuplesFeature());
+            // PROTOTYPE(lambda-types): 
             N(SyntaxKind.CompilationUnit);
             {
                 N(SyntaxKind.ClassDeclaration);

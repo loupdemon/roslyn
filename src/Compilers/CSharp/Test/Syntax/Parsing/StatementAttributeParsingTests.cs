@@ -7401,40 +7401,25 @@ class C
                             }
                             N(SyntaxKind.CloseBracketToken);
                         }
-                        N(SyntaxKind.QualifiedName);
+                        N(SyntaxKind.LambdaType);
                         {
-                            N(SyntaxKind.IdentifierName);
+                            N(SyntaxKind.QualifiedName);
                             {
-                                N(SyntaxKind.IdentifierToken, "x");
-                            }
-                            N(SyntaxKind.DotToken);
-                            N(SyntaxKind.IdentifierName);
-                            {
-                                N(SyntaxKind.IdentifierToken, "y");
-                            }
-                        }
-                    }
-                    N(SyntaxKind.IncompleteMember);
-                    {
-                        N(SyntaxKind.TupleType);
-                        {
-                            N(SyntaxKind.OpenParenToken);
-                            M(SyntaxKind.TupleElement);
-                            {
-                                M(SyntaxKind.IdentifierName);
+                                N(SyntaxKind.IdentifierName);
                                 {
-                                    M(SyntaxKind.IdentifierToken);
+                                    N(SyntaxKind.IdentifierToken, "x");
+                                }
+                                N(SyntaxKind.DotToken);
+                                N(SyntaxKind.IdentifierName);
+                                {
+                                    N(SyntaxKind.IdentifierToken, "y");
                                 }
                             }
-                            M(SyntaxKind.CommaToken);
-                            M(SyntaxKind.TupleElement);
+                            N(SyntaxKind.ParameterList);
                             {
-                                M(SyntaxKind.IdentifierName);
-                                {
-                                    M(SyntaxKind.IdentifierToken);
-                                }
+                                N(SyntaxKind.OpenParenToken);
+                                N(SyntaxKind.CloseParenToken);
                             }
-                            N(SyntaxKind.CloseParenToken);
                         }
                     }
                     N(SyntaxKind.CloseBraceToken);

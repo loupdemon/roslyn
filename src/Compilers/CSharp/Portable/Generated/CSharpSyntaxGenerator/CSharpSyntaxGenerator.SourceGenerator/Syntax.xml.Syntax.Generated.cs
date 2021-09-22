@@ -3073,6 +3073,66 @@ namespace Microsoft.CodeAnalysis.CSharp.Syntax
         public new AnonymousMethodExpressionSyntax AddBlockStatements(params StatementSyntax[] items) => WithBlock(this.Block.WithStatements(this.Block.Statements.AddRange(items)));
     }
 
+    /// <summary>Class which represents the syntax node for a lambda type.</summary>
+    /// <remarks>
+    /// <para>This node is associated with the following syntax kinds:</para>
+    /// <list type="bullet">
+    /// <item><description><see cref="SyntaxKind.LambdaType"/></description></item>
+    /// </list>
+    /// </remarks>
+    public sealed partial class LambdaTypeSyntax : TypeSyntax
+    {
+        private TypeSyntax? returnType;
+        private ParameterListSyntax? parameterList;
+
+        internal LambdaTypeSyntax(InternalSyntax.CSharpSyntaxNode green, SyntaxNode? parent, int position)
+          : base(green, parent, position)
+        {
+        }
+
+        /// <summary>TypeSyntax representing the return type of the lambda type.</summary>
+        public TypeSyntax ReturnType => GetRedAtZero(ref this.returnType)!;
+
+        /// <summary>ParameterListSyntax node representing the list of parameters for the lambda type.</summary>
+        public ParameterListSyntax ParameterList => GetRed(ref this.parameterList, 1)!;
+
+        internal override SyntaxNode? GetNodeSlot(int index)
+            => index switch
+            {
+                0 => GetRedAtZero(ref this.returnType)!,
+                1 => GetRed(ref this.parameterList, 1)!,
+                _ => null,
+            };
+
+        internal override SyntaxNode? GetCachedSlot(int index)
+            => index switch
+            {
+                0 => this.returnType,
+                1 => this.parameterList,
+                _ => null,
+            };
+
+        public override void Accept(CSharpSyntaxVisitor visitor) => visitor.VisitLambdaType(this);
+        public override TResult? Accept<TResult>(CSharpSyntaxVisitor<TResult> visitor) where TResult : default => visitor.VisitLambdaType(this);
+
+        public LambdaTypeSyntax Update(TypeSyntax returnType, ParameterListSyntax parameterList)
+        {
+            if (returnType != this.ReturnType || parameterList != this.ParameterList)
+            {
+                var newNode = SyntaxFactory.LambdaType(returnType, parameterList);
+                var annotations = GetAnnotations();
+                return annotations?.Length > 0 ? newNode.WithAnnotations(annotations) : newNode;
+            }
+
+            return this;
+        }
+
+        public LambdaTypeSyntax WithReturnType(TypeSyntax returnType) => Update(returnType, this.ParameterList);
+        public LambdaTypeSyntax WithParameterList(ParameterListSyntax parameterList) => Update(this.ReturnType, parameterList);
+
+        public LambdaTypeSyntax AddParameterListParameters(params ParameterSyntax[] items) => WithParameterList(this.ParameterList.WithParameters(this.ParameterList.Parameters.AddRange(items)));
+    }
+
     /// <summary>Provides the base class from which the classes that represent lambda expressions are derived.</summary>
     public abstract partial class LambdaExpressionSyntax : AnonymousFunctionExpressionSyntax
     {

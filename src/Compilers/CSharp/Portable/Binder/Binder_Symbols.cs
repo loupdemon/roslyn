@@ -480,6 +480,9 @@ namespace Microsoft.CodeAnalysis.CSharp
                         return BindNamespaceOrTypeOrAliasSymbol(refTypeSyntax.Type, diagnostics, basesBeingResolved, suppressUseSiteDiagnostics);
                     }
 
+                case SyntaxKind.LambdaType:
+                    return bindLambdaType();
+
                 default:
                     {
                         // This is invalid syntax for a type.  This arises when a constant pattern that fails to bind
@@ -516,6 +519,42 @@ namespace Microsoft.CodeAnalysis.CSharp
                             diagnosticBag);
                     }
                 }
+            }
+
+            NamespaceOrTypeOrAliasSymbolWithAnnotations bindLambdaType()
+            {
+                var lambdaSyntax = (LambdaTypeSyntax)syntax;
+                TypeSyntax returnTypeSyntax = lambdaSyntax.ReturnType;
+                TypeWithAnnotations returnType = BindType(returnTypeSyntax, diagnostics, basesBeingResolved);
+                if (returnType.SpecialType == SpecialType.System_Void)
+                {
+                    var wellKnownAction = WellKnownType.System_Action + lambdaSyntax.ParameterList.ParameterCount;
+                    var originalDef = Compilation.GetWellKnownType(wellKnownAction);
+                    var constructed = originalDef.Construct(
+                            lambdaSyntax.ParameterList.Parameters
+                                .Select(p => BindType(p.Type, diagnostics, basesBeingResolved))
+                                .ToImmutableArray()
+                        );
+                    // PROTOTYPE(lambda-types): doesn't handle large numbers of params, param names, ref kinds, etc.
+                    return TypeWithAnnotations.Create(constructed);
+                }
+                else
+                {
+                    var wellKnownFunc = WellKnownType.System_Func_T + lambdaSyntax.ParameterList.ParameterCount;
+                    var originalDef = Compilation.GetWellKnownType(wellKnownFunc);
+                    var constructed = originalDef.Construct(
+                            lambdaSyntax.ParameterList.Parameters
+                                    .Select(p => BindType(p.Type, diagnostics, basesBeingResolved))
+                                    // PROTOTYPE(lambda-types): do we need to handle a null Type in syntax for error recovery? probably.
+                                    // .Select(p => p.Type is null ? TypeWithAnnotations.Create(CreateErrorType(p.Identifier.Text ?? "")) : BindType(p.Type, diagnostics, basesBeingResolved))
+                                    .Concat(new[] { returnType })
+                                .ToImmutableArray()
+                        );
+                    return TypeWithAnnotations.Create(constructed);
+                }
+
+                // var method = new LambdaTypeMethodSymbol(returnType, default, lambdaSyntax, this, diagnostics);
+                // return TypeWithAnnotations.Create(AreNullableAnnotationsEnabled(lambdaSyntax.ParameterList.CloseParenToken), new LambdaTypeSymbol(method));
             }
 
             NamespaceOrTypeOrAliasSymbolWithAnnotations bindNullable()

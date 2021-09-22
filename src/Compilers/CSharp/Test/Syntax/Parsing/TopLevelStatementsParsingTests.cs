@@ -2219,18 +2219,9 @@ e
             var test = "using int (x, y)";
 
             UsingTree(test,
-                // (1,11): error CS1001: Identifier expected
+                // (1,17): error CS1001: Identifier expected
                 // using int (x, y)
-                Diagnostic(ErrorCode.ERR_IdentifierExpected, "(").WithLocation(1, 11),
-                // (1,11): error CS1528: Expected ; or = (cannot specify constructor arguments in declaration)
-                // using int (x, y)
-                Diagnostic(ErrorCode.ERR_BadVarDecl, "(x, y").WithLocation(1, 11),
-                // (1,11): error CS1003: Syntax error, '[' expected
-                // using int (x, y)
-                Diagnostic(ErrorCode.ERR_SyntaxError, "(").WithArguments("[", "(").WithLocation(1, 11),
-                // (1,16): error CS1003: Syntax error, ']' expected
-                // using int (x, y)
-                Diagnostic(ErrorCode.ERR_SyntaxError, ")").WithArguments("]", ")").WithLocation(1, 16),
+                Diagnostic(ErrorCode.ERR_IdentifierExpected, "").WithLocation(1, 17),
                 // (1,17): error CS1002: ; expected
                 // using int (x, y)
                 Diagnostic(ErrorCode.ERR_SemicolonExpected, "").WithLocation(1, 17)
@@ -2538,9 +2529,9 @@ e
             var test = @"[attribute] local() {}";
 
             UsingTree(test,
-                // (1,18): error CS1001: Identifier expected
+                // (1,21): error CS1002: ; expected
                 // [attribute] local() {}
-                Diagnostic(ErrorCode.ERR_IdentifierExpected, "(").WithLocation(1, 18)
+                Diagnostic(ErrorCode.ERR_SemicolonExpected, "{").WithLocation(1, 21)
                 );
 
             N(SyntaxKind.CompilationUnit);

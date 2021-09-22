@@ -116,6 +116,11 @@ namespace Microsoft.CodeAnalysis
         /// Symbol represents a function pointer type
         /// </summary>
         FunctionPointerType = 20,
+
+        /// <summary>
+        /// Symbol represents a lambda type.
+        /// </summary>
+        LambdaType = 21,
     }
 
     internal static class SymbolKindInternal

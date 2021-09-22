@@ -343,6 +343,7 @@ incomplete_member
 type
   : array_type
   | function_pointer_type
+  | lambda_type
   | name
   | nullable_type
   | omitted_type_argument
@@ -383,6 +384,10 @@ function_pointer_parameter_list
 
 function_pointer_parameter
   : attribute_list* modifier* type
+  ;
+
+lambda_type
+  : type parameter_list
   ;
 
 nullable_type

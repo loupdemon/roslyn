@@ -2277,7 +2277,7 @@ delegate D();
                     {
                         N(SyntaxKind.IdentifierName);
                         {
-                            N(SyntaxKind.IdentifierToken);
+                            N(SyntaxKind.IdentifierToken, "Goo");
                         }
                     }
                     N(SyntaxKind.CloseBracketToken);
@@ -2294,7 +2294,7 @@ delegate D();
                     {
                         N(SyntaxKind.IdentifierName);
                         {
-                            N(SyntaxKind.IdentifierToken);
+                            N(SyntaxKind.IdentifierToken, "Bar");
                         }
                     }
                     N(SyntaxKind.CloseBracketToken);
@@ -2308,7 +2308,7 @@ delegate D();
                         {
                             N(SyntaxKind.IdentifierName);
                             {
-                                N(SyntaxKind.IdentifierToken);
+                                N(SyntaxKind.IdentifierToken, "Goo");
                             }
                         }
                         N(SyntaxKind.CloseBracketToken);
@@ -2317,7 +2317,7 @@ delegate D();
                     {
                         N(SyntaxKind.VoidKeyword);
                     }
-                    N(SyntaxKind.IdentifierToken);
+                    N(SyntaxKind.IdentifierToken, "goo");
                     N(SyntaxKind.ParameterList);
                     {
                         N(SyntaxKind.OpenParenToken);
@@ -2338,7 +2338,7 @@ delegate D();
                         {
                             N(SyntaxKind.IdentifierName);
                             {
-                                N(SyntaxKind.IdentifierToken);
+                                N(SyntaxKind.IdentifierToken, "Bar");
                             }
                         }
                         N(SyntaxKind.CloseBracketToken);
@@ -2351,7 +2351,7 @@ delegate D();
                         }
                         N(SyntaxKind.VariableDeclarator);
                         {
-                            N(SyntaxKind.IdentifierToken);
+                            N(SyntaxKind.IdentifierToken, "x");
                         }
                     }
                     N(SyntaxKind.SemicolonToken);
@@ -2365,13 +2365,13 @@ delegate D();
                         {
                             N(SyntaxKind.IdentifierName);
                             {
-                                N(SyntaxKind.IdentifierToken);
+                                N(SyntaxKind.IdentifierToken, "Baz");
                             }
                         }
                         N(SyntaxKind.CloseBracketToken);
                     }
                     N(SyntaxKind.ClassKeyword);
-                    N(SyntaxKind.IdentifierToken);
+                    N(SyntaxKind.IdentifierToken, "C");
                     N(SyntaxKind.OpenBraceToken);
                     N(SyntaxKind.CloseBraceToken);
                 }
@@ -2384,13 +2384,13 @@ delegate D();
                         {
                             N(SyntaxKind.IdentifierName);
                             {
-                                N(SyntaxKind.IdentifierToken);
+                                N(SyntaxKind.IdentifierToken, "Baz");
                             }
                         }
                         N(SyntaxKind.CloseBracketToken);
                     }
                     N(SyntaxKind.StructKeyword);
-                    N(SyntaxKind.IdentifierToken);
+                    N(SyntaxKind.IdentifierToken, "C");
                     N(SyntaxKind.OpenBraceToken);
                     N(SyntaxKind.CloseBraceToken);
                 }
@@ -2403,13 +2403,13 @@ delegate D();
                         {
                             N(SyntaxKind.IdentifierName);
                             {
-                                N(SyntaxKind.IdentifierToken);
+                                N(SyntaxKind.IdentifierToken, "Baz");
                             }
                         }
                         N(SyntaxKind.CloseBracketToken);
                     }
                     N(SyntaxKind.EnumKeyword);
-                    N(SyntaxKind.IdentifierToken);
+                    N(SyntaxKind.IdentifierToken, "C");
                     N(SyntaxKind.OpenBraceToken);
                     N(SyntaxKind.CloseBraceToken);
                 }
@@ -2422,26 +2422,35 @@ delegate D();
                         {
                             N(SyntaxKind.IdentifierName);
                             {
-                                N(SyntaxKind.IdentifierToken);
+                                N(SyntaxKind.IdentifierToken, "Baz");
                             }
                         }
                         N(SyntaxKind.CloseBracketToken);
                     }
                     N(SyntaxKind.DelegateKeyword);
-                    N(SyntaxKind.IdentifierName);
+                    N(SyntaxKind.LambdaType);
                     {
-                        N(SyntaxKind.IdentifierToken);
+                        N(SyntaxKind.IdentifierName);
+                        {
+                            N(SyntaxKind.IdentifierToken, "D");
+                        }
+                        N(SyntaxKind.ParameterList);
+                        {
+                            N(SyntaxKind.OpenParenToken);
+                            N(SyntaxKind.CloseParenToken);
+                        }
                     }
                     M(SyntaxKind.IdentifierToken);
-                    N(SyntaxKind.ParameterList);
+                    M(SyntaxKind.ParameterList);
                     {
-                        N(SyntaxKind.OpenParenToken);
-                        N(SyntaxKind.CloseParenToken);
+                        M(SyntaxKind.OpenParenToken);
+                        M(SyntaxKind.CloseParenToken);
                     }
                     N(SyntaxKind.SemicolonToken);
                 }
                 N(SyntaxKind.EndOfFileToken);
             }
+            EOF();
         }
 
         #endregion

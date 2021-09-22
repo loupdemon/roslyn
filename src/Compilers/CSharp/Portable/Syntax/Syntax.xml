@@ -1391,6 +1391,25 @@
     <FactoryComment>
       <summary>Creates an AnonymousMethodExpressionSyntax node.</summary>
     </FactoryComment>
+  </Node>asdf
+  <Node Name="LambdaTypeSyntax" Base="TypeSyntax">
+    <Kind Name="LambdaType"/>
+    <Field Name="ReturnType" Type="TypeSyntax">
+      <PropertyComment>
+        <summary>TypeSyntax representing the return type of the lambda type.</summary>
+      </PropertyComment>
+    </Field>
+    <Field Name="ParameterList" Type="ParameterListSyntax">
+      <PropertyComment>
+        <summary>ParameterListSyntax node representing the list of parameters for the lambda type.</summary>
+      </PropertyComment>
+    </Field>
+    <TypeComment>
+      <summary>Class which represents the syntax node for a lambda type.</summary>
+    </TypeComment>
+    <FactoryComment>
+      <summary>Creates a LambdaTypeSyntax node.</summary>
+    </FactoryComment>
   </Node>
   <AbstractNode Name="LambdaExpressionSyntax" Base="AnonymousFunctionExpressionSyntax">
     <TypeComment>

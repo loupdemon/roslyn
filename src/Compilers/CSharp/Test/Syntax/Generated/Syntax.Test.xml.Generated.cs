@@ -169,6 +169,9 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         private static Syntax.InternalSyntax.AnonymousMethodExpressionSyntax GenerateAnonymousMethodExpression()
             => InternalSyntaxFactory.AnonymousMethodExpression(new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.SyntaxToken>(), InternalSyntaxFactory.Token(SyntaxKind.DelegateKeyword), null, GenerateBlock(), null);
 
+        private static Syntax.InternalSyntax.LambdaTypeSyntax GenerateLambdaType()
+            => InternalSyntaxFactory.LambdaType(GenerateIdentifierName(), GenerateParameterList());
+
         private static Syntax.InternalSyntax.SimpleLambdaExpressionSyntax GenerateSimpleLambdaExpression()
             => InternalSyntaxFactory.SimpleLambdaExpression(new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.AttributeListSyntax>(), new Microsoft.CodeAnalysis.Syntax.InternalSyntax.SyntaxList<Syntax.InternalSyntax.SyntaxToken>(), GenerateParameter(), InternalSyntaxFactory.Token(SyntaxKind.EqualsGreaterThanToken), null, null);
 
@@ -1331,6 +1334,17 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             Assert.Null(node.ParameterList);
             Assert.NotNull(node.Block);
             Assert.Null(node.ExpressionBody);
+
+            AttachAndCheckDiagnostics(node);
+        }
+
+        [Fact]
+        public void TestLambdaTypeFactoryAndProperties()
+        {
+            var node = GenerateLambdaType();
+
+            Assert.NotNull(node.ReturnType);
+            Assert.NotNull(node.ParameterList);
 
             AttachAndCheckDiagnostics(node);
         }
@@ -5113,6 +5127,32 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         public void TestAnonymousMethodExpressionIdentityRewriter()
         {
             var oldNode = GenerateAnonymousMethodExpression();
+            var rewriter = new IdentityRewriter();
+            var newNode = rewriter.Visit(oldNode);
+
+            Assert.Same(oldNode, newNode);
+        }
+
+        [Fact]
+        public void TestLambdaTypeTokenDeleteRewriter()
+        {
+            var oldNode = GenerateLambdaType();
+            var rewriter = new TokenDeleteRewriter();
+            var newNode = rewriter.Visit(oldNode);
+
+            if(!oldNode.IsMissing)
+            {
+                Assert.NotEqual(oldNode, newNode);
+            }
+
+            Assert.NotNull(newNode);
+            Assert.True(newNode.IsMissing, "No tokens => missing");
+        }
+
+        [Fact]
+        public void TestLambdaTypeIdentityRewriter()
+        {
+            var oldNode = GenerateLambdaType();
             var rewriter = new IdentityRewriter();
             var newNode = rewriter.Visit(oldNode);
 
@@ -10015,6 +10055,9 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         private static AnonymousMethodExpressionSyntax GenerateAnonymousMethodExpression()
             => SyntaxFactory.AnonymousMethodExpression(new SyntaxTokenList(), SyntaxFactory.Token(SyntaxKind.DelegateKeyword), default(ParameterListSyntax), GenerateBlock(), default(ExpressionSyntax));
 
+        private static LambdaTypeSyntax GenerateLambdaType()
+            => SyntaxFactory.LambdaType(GenerateIdentifierName(), GenerateParameterList());
+
         private static SimpleLambdaExpressionSyntax GenerateSimpleLambdaExpression()
             => SyntaxFactory.SimpleLambdaExpression(new SyntaxList<AttributeListSyntax>(), new SyntaxTokenList(), GenerateParameter(), SyntaxFactory.Token(SyntaxKind.EqualsGreaterThanToken), default(BlockSyntax), default(ExpressionSyntax));
 
@@ -11178,6 +11221,17 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
             Assert.NotNull(node.Block);
             Assert.Null(node.ExpressionBody);
             var newNode = node.WithModifiers(node.Modifiers).WithDelegateKeyword(node.DelegateKeyword).WithParameterList(node.ParameterList).WithBlock(node.Block).WithExpressionBody(node.ExpressionBody);
+            Assert.Equal(node, newNode);
+        }
+
+        [Fact]
+        public void TestLambdaTypeFactoryAndProperties()
+        {
+            var node = GenerateLambdaType();
+
+            Assert.NotNull(node.ReturnType);
+            Assert.NotNull(node.ParameterList);
+            var newNode = node.WithReturnType(node.ReturnType).WithParameterList(node.ParameterList);
             Assert.Equal(node, newNode);
         }
 
@@ -14959,6 +15013,32 @@ namespace Microsoft.CodeAnalysis.CSharp.UnitTests
         public void TestAnonymousMethodExpressionIdentityRewriter()
         {
             var oldNode = GenerateAnonymousMethodExpression();
+            var rewriter = new IdentityRewriter();
+            var newNode = rewriter.Visit(oldNode);
+
+            Assert.Same(oldNode, newNode);
+        }
+
+        [Fact]
+        public void TestLambdaTypeTokenDeleteRewriter()
+        {
+            var oldNode = GenerateLambdaType();
+            var rewriter = new TokenDeleteRewriter();
+            var newNode = rewriter.Visit(oldNode);
+
+            if(!oldNode.IsMissing)
+            {
+                Assert.NotEqual(oldNode, newNode);
+            }
+
+            Assert.NotNull(newNode);
+            Assert.True(newNode.IsMissing, "No tokens => missing");
+        }
+
+        [Fact]
+        public void TestLambdaTypeIdentityRewriter()
+        {
+            var oldNode = GenerateLambdaType();
             var rewriter = new IdentityRewriter();
             var newNode = rewriter.Visit(oldNode);
 
