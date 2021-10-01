@@ -1455,6 +1455,94 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         }
 
+        private BoundExpression BuildParamsArray(
+            SyntaxNode syntax,
+            Symbol methodOrIndexer,
+            ImmutableArray<int> argsToParamsOpt,
+            ImmutableArray<BoundExpression> rewrittenArguments,
+            ImmutableArray<ParameterSymbol> parameters,
+            BoundExpression tempStoreArgument)
+        {
+            ArrayBuilder<BoundExpression> paramArray = ArrayBuilder<BoundExpression>.GetInstance();
+            int paramsParam = parameters.Length - 1;
+
+            if (tempStoreArgument != null)
+            {
+                paramArray.Add(tempStoreArgument);
+                // Special case: see comment in BuildStoresToTemps above; if there 
+                // is an argument already in the slot then it is the only element in 
+                // the params array. 
+            }
+            else
+            {
+                for (int a = 0; a < rewrittenArguments.Length; ++a)
+                {
+                    BoundExpression argument = rewrittenArguments[a];
+                    int p = (!argsToParamsOpt.IsDefault) ? argsToParamsOpt[a] : a;
+                    if (p == paramsParam)
+                    {
+                        paramArray.Add(argument);
+                    }
+                }
+            }
+
+            var paramArrayType = parameters[paramsParam].Type;
+            var arrayArgs = paramArray.ToImmutableAndFree();
+
+            // If this is a zero-length array, rather than using "new T[0]", optimize with "Array.Empty<T>()" 
+            // if it's available.  However, we also disable the optimization if we're in an expression lambda, the 
+            // point of which is just to represent the semantics of an operation, and we don't know that all consumers
+            // of expression lambdas will appropriately understand Array.Empty<T>().
+            // We disable it for pointer types as well, since they cannot be used as Type Arguments.
+            if (arrayArgs.Length == 0
+                && !_inExpressionLambda
+                && paramArrayType is ArrayTypeSymbol ats // could be false if there's a semantic error, e.g. the params parameter type isn't an array
+                && !ats.ElementType.IsPointerOrFunctionPointer())
+            {
+                MethodSymbol? arrayEmpty = _compilation.GetWellKnownTypeMember(WellKnownMember.System_Array__Empty) as MethodSymbol;
+                if (arrayEmpty != null) // will be null if Array.Empty<T> doesn't exist in reference assemblies
+                {
+                    _diagnostics.ReportUseSite(arrayEmpty, syntax);
+                    // return an invocation of "Array.Empty<T>()"
+                    arrayEmpty = arrayEmpty.Construct(ImmutableArray.Create(ats.ElementType));
+                    return new BoundCall(
+                        syntax,
+                        null,
+                        arrayEmpty,
+                        ImmutableArray<BoundExpression>.Empty,
+                        default(ImmutableArray<string>),
+                        default(ImmutableArray<RefKind>),
+                        isDelegateCall: false,
+                        expanded: false,
+                        invokedAsExtensionMethod: false,
+                        argsToParamsOpt: default(ImmutableArray<int>),
+                        defaultArguments: default(BitVector),
+                        resultKind: LookupResultKind.Viable,
+                        type: arrayEmpty.ReturnType);
+                }
+            }
+
+            return CreateParamArrayArgument(syntax, paramArrayType, arrayArgs, _compilation, this);
+        }
+
+        private static BoundExpression CreateParamArrayArgument(SyntaxNode syntax,
+            TypeSymbol paramArrayType,
+            ImmutableArray<BoundExpression> arrayArgs,
+            CSharpCompilation compilation,
+            LocalRewriter? localRewriter)
+        {
+
+            TypeSymbol int32Type = compilation.GetSpecialType(SpecialType.System_Int32);
+            BoundExpression arraySize = MakeLiteral(syntax, ConstantValue.Create(arrayArgs.Length), int32Type, localRewriter);
+
+            return new BoundArrayCreation(
+                syntax,
+                ImmutableArray.Create(arraySize),
+                new BoundArrayInitialization(syntax, arrayArgs) { WasCompilerGenerated = true },
+                paramArrayType)
+            { WasCompilerGenerated = true };
+        }
+
 #nullable disable
 
         /// <summary>
