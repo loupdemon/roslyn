@@ -336,7 +336,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             // stores in storesToTemps and make the actual argument a reference to the temp.
             // Do not yet attempt to deal with params arrays or optional arguments.
             BuildStoresToTemps(
-                expanded,
                 argsToParamsOpt,
                 parameters,
                 argumentRefKinds,
@@ -349,12 +348,14 @@ namespace Microsoft.CodeAnalysis.CSharp
             // Step two: If we have a params array, build the array and fill in the argument.
             if (expanded)
             {
-                BoundExpression array = BuildParamsArray(syntax, indexer, argsToParamsOpt, rewrittenArguments, parameters, actualArguments[actualArguments.Length - 1]);
-                BoundAssignmentOperator storeToTemp;
-                var boundTemp = _factory.StoreToTemp(array, out storeToTemp);
-                stores.Add(storeToTemp);
-                temps.Add(boundTemp.LocalSymbol);
-                actualArguments[actualArguments.Length - 1] = boundTemp;
+                // TODO: build params array during binding
+                //BoundExpression array = BuildParamsArray(syntax, indexer, argsToParamsOpt, rewrittenArguments, parameters, actualArguments[actualArguments.Length - 1]);
+
+                //BoundAssignmentOperator storeToTemp;
+                //var boundTemp = _factory.StoreToTemp(array, out storeToTemp);
+                //stores.Add(storeToTemp);
+                //temps.Add(boundTemp.LocalSymbol);
+                //actualArguments[actualArguments.Length - 1] = boundTemp;
             }
 
             // Step three: Now fill in the optional arguments. (Dev11 uses the getter for optional arguments in

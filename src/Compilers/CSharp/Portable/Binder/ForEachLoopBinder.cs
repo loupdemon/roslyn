@@ -991,10 +991,10 @@ namespace Microsoft.CodeAnalysis.CSharp
                     var argsToParams = default(ImmutableArray<int>);
                     bool expanded = disposeMethod.HasParamsParameter();
 
-                    BindDefaultArguments(
+                    BindDefaultArgumentsAndParamsArray(
                         _syntax,
                         disposeMethod.Parameters,
-                        argsBuilder,
+                        ref argsBuilder,
                         argumentRefKindsBuilder: null,
                         ref argsToParams,
                         out BitVector defaultArguments,
@@ -1195,10 +1195,11 @@ namespace Microsoft.CodeAnalysis.CSharp
                 {
                     var argsToParams = overloadResolutionResult.ValidResult.Result.ArgsToParamsOpt;
                     var expanded = overloadResolutionResult.ValidResult.Result.Kind == MemberResolutionKind.ApplicableInExpandedForm;
-                    BindDefaultArguments(
+                    var arguments = analyzedArguments.Arguments;
+                    BindDefaultArgumentsAndParamsArray(
                         _syntax,
                         result.Parameters,
-                        analyzedArguments.Arguments,
+                        ref arguments,
                         analyzedArguments.RefKinds,
                         ref argsToParams,
                         out BitVector defaultArguments,
@@ -1206,7 +1207,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                         enableCallerInfo: true,
                         diagnostics);
 
-                    info = new MethodArgumentInfo(result, analyzedArguments.Arguments.ToImmutable(), argsToParams, defaultArguments, expanded);
+                    info = new MethodArgumentInfo(result, arguments.ToImmutableAndFree(), argsToParams, defaultArguments, expanded);
                 }
             }
             else if (overloadResolutionResult.GetAllApplicableMembers() is var applicableMembers && applicableMembers.Length > 1)
@@ -1667,10 +1668,10 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
 
             ImmutableArray<int> argsToParams = default;
-            BindDefaultArguments(
+            BindDefaultArgumentsAndParamsArray(
                 syntax,
                 method.Parameters,
-                argsBuilder,
+                ref argsBuilder,
                 argumentRefKindsBuilder: null,
                 ref argsToParams,
                 defaultArguments: out BitVector defaultArguments,

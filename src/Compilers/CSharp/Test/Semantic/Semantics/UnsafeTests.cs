@@ -1957,6 +1957,9 @@ struct S
             var expected = @"
 Yes, Call 'M(new S().i, default(S).i, MakeS().i, (new S[1])[0].i)' requires fixing.
 Yes, ThisReference 'M' requires fixing.
+Yes, ArrayCreation 'M(new S().i, default(S).i, MakeS().i, (new S[1])[0].i)' requires fixing.
+Yes, Literal 'M(new S().i, default(S).i, MakeS().i, (new S[1])[0].i)' requires fixing.
+Yes, ArrayInitialization 'M(new S().i, default(S).i, MakeS().i, (new S[1])[0].i)' requires fixing.
 Yes, Conversion 'new S().i' requires fixing.
 Yes, FieldAccess 'new S().i' requires fixing.
 Yes, ObjectCreationExpression 'new S()' requires fixing.
@@ -2384,7 +2387,7 @@ No, Parameter 'x' does not require fixing. It has an underlying symbol 'x'
 
             var actual = string.Join(Environment.NewLine, builder);
 
-            Assert.Equal(expected, actual);
+            AssertEx.Equal(expected, actual);
 
             builder.Free();
         }

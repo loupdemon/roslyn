@@ -209,7 +209,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 // arguments that will end up being reflected in the SemanticModel/IOperation
                 if (indexerAccess.OriginalIndexersOpt.IsDefault)
                 {
-                    BindDefaultArguments(indexerAccess.Syntax, parameters, argumentsBuilder, refKindsBuilderOpt, ref argsToParams, out defaultArguments, indexerAccess.Expanded, enableCallerInfo: true, diagnostics);
+                    BindDefaultArgumentsAndParamsArray(indexerAccess.Syntax, parameters, ref argumentsBuilder, refKindsBuilderOpt, ref argsToParams, out defaultArguments, indexerAccess.Expanded, enableCallerInfo: true, diagnostics);
                 }
 
                 indexerAccess = indexerAccess.Update(

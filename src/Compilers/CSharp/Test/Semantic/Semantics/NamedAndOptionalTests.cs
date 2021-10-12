@@ -186,6 +186,19 @@ class C : Middle
         }
 
         [Fact]
+        public void Params_01()
+        {
+            var source = @"
+class C
+{
+    void M(params string[] args) { }
+    void M1() => M(""a"", ""b"", ""c"");
+}
+";
+            CreateCompilation(source).VerifyDiagnostics();
+        }
+
+        [Fact]
         public void TestNamedAndOptionalParamsErrors2()
         {
             string source = @"
@@ -285,6 +298,7 @@ class C
         [Fact]
         public void TestNamedAndOptionalParamsBasic()
         {
+            // TODO: test crashes. let's fix.
             string source = @"
     using System;
 

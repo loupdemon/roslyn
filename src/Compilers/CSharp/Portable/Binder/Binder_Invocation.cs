@@ -1030,8 +1030,8 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             var expanded = methodResult.Result.Kind == MemberResolutionKind.ApplicableInExpandedForm;
             var argsToParams = methodResult.Result.ArgsToParamsOpt;
-
-            BindDefaultArguments(node, method.Parameters, analyzedArguments.Arguments, analyzedArguments.RefKinds, ref argsToParams, out var defaultArguments, expanded, enableCallerInfo: true, diagnostics);
+            var argumentsBuilder = analyzedArguments.Arguments;
+            BindDefaultArgumentsAndParamsArray(node, method.Parameters, ref argumentsBuilder, analyzedArguments.RefKinds, ref argsToParams, out var defaultArguments, expanded, enableCallerInfo: true, diagnostics);
 
             // Note: we specifically want to do final validation (7.6.5.1) without checking delegate compatibility (15.2),
             // so we're calling MethodGroupFinalValidation directly, rather than via MethodGroupConversionHasErrors.
@@ -1092,7 +1092,7 @@ namespace Microsoft.CodeAnalysis.CSharp
 
             var argNames = analyzedArguments.GetNames();
             var argRefKinds = analyzedArguments.RefKinds.ToImmutableOrNull();
-            var args = analyzedArguments.Arguments.ToImmutable();
+            var args = argumentsBuilder.ToImmutable();
 
             if (!gotError && method.RequiresInstanceReceiver && receiver != null && receiver.Kind == BoundKind.ThisReference && receiver.WasCompilerGenerated)
             {
@@ -1272,6 +1272,25 @@ namespace Microsoft.CodeAnalysis.CSharp
             return parameter;
         }
 
+        internal void BindDefaultArgumentsAndParamsArray(
+            SyntaxNode node,
+            ImmutableArray<ParameterSymbol> parameters,
+            ref ArrayBuilder<BoundExpression> argumentsBuilder,
+            ArrayBuilder<RefKind>? argumentRefKindsBuilder,
+            ref ImmutableArray<int> argsToParamsOpt,
+            out BitVector defaultArguments,
+            bool expanded,
+            bool enableCallerInfo,
+            BindingDiagnosticBag diagnostics,
+            bool assertMissingParametersAreOptional = true)
+        {
+            BindDefaultArguments(node, parameters, argumentsBuilder, argumentRefKindsBuilder, ref argsToParamsOpt, out defaultArguments, expanded, enableCallerInfo, diagnostics, assertMissingParametersAreOptional);
+            if (expanded)
+            {
+                BindParamsArray(node, ref argsToParamsOpt, ref argumentsBuilder, parameters, diagnostics);
+            }
+        }
+
         internal void BindDefaultArguments(
             SyntaxNode node,
             ImmutableArray<ParameterSymbol> parameters,
@@ -1284,7 +1303,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             BindingDiagnosticBag diagnostics,
             bool assertMissingParametersAreOptional = true)
         {
-
             var visitedParameters = BitVector.Create(parameters.Length);
             for (var i = 0; i < argumentsBuilder.Count; i++)
             {
@@ -1321,7 +1339,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             // Params methods can be invoked in normal form, so the strongest assertion we can make is that, if
             // we're in an expanded context, the last param must be params. The inverse is not necessarily true.
             Debug.Assert(!expanded || parameters[^1].IsParams);
-            // Params array is filled in the local rewriter
             var lastIndex = expanded ? ^1 : ^0;
 
             var argumentsCount = argumentsBuilder.Count;
@@ -1343,6 +1360,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     argsToParamsBuilder?.Add(parameter.Ordinal);
                 }
             }
+
             Debug.Assert(argumentRefKindsBuilder is null || argumentRefKindsBuilder.Count == 0 || argumentRefKindsBuilder.Count == argumentsBuilder.Count);
             Debug.Assert(argsToParamsBuilder is null || argsToParamsBuilder.Count == argumentsBuilder.Count);
 
@@ -1455,94 +1473,145 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         }
 
-        private BoundExpression BuildParamsArray(
+        private void BindParamsArray(
             SyntaxNode syntax,
-            Symbol methodOrIndexer,
-            ImmutableArray<int> argsToParamsOpt,
-            ImmutableArray<BoundExpression> rewrittenArguments,
+            ref ImmutableArray<int> argsToParamsOpt,
+            ref ArrayBuilder<BoundExpression> argumentsBuilder,
             ImmutableArray<ParameterSymbol> parameters,
-            BoundExpression tempStoreArgument)
+            BindingDiagnosticBag diagnostics)
         {
+            ArrayBuilder<BoundExpression> nonParamArguments = ArrayBuilder<BoundExpression>.GetInstance();
             ArrayBuilder<BoundExpression> paramArray = ArrayBuilder<BoundExpression>.GetInstance();
-            int paramsParam = parameters.Length - 1;
+            ArrayBuilder<int>? argsToParamsBuilder = argsToParamsOpt.IsDefault ? null : ArrayBuilder<int>.GetInstance();
+            int paramsParamIndex = parameters.Length - 1;
 
-            if (tempStoreArgument != null)
+            if (argsToParamsBuilder is null)
             {
-                paramArray.Add(tempStoreArgument);
-                // Special case: see comment in BuildStoresToTemps above; if there 
-                // is an argument already in the slot then it is the only element in 
-                // the params array. 
+                for (int i = 0; i < paramsParamIndex; i++)
+                {
+                    nonParamArguments.Add(argumentsBuilder[i]);
+                }
+                for (int i = paramsParamIndex; i < argumentsBuilder.Count; i++)
+                {
+                    paramArray.Add(argumentsBuilder[i]);
+                }
+                nonParamArguments.Add(makeParamsArrayArgument());
             }
             else
             {
-                for (int a = 0; a < rewrittenArguments.Length; ++a)
+                // For compat we allow interleaving named arguments with a single params argument a la the following
+                // void M(int x, params int[] y);
+                // M(y: 1, x: 2);
+                // Therefore we need to build the array of params arguments and search for the index to insert it into,
+                // *then* do the process of copying over the arguments to the new builder.
+                var paramsArgIndex = -1;
+                for (var argIndex = 0; argIndex < argsToParamsOpt.Length; argIndex++)
                 {
-                    BoundExpression argument = rewrittenArguments[a];
-                    int p = (!argsToParamsOpt.IsDefault) ? argsToParamsOpt[a] : a;
-                    if (p == paramsParam)
+                    // allow a single named argument in the middle of an argument list
+                    // to be translated into a params array.
+                    if (argsToParamsOpt[argIndex] == paramsParamIndex)
                     {
-                        paramArray.Add(argument);
+                        // TODO: when do we insert this params argument into the argument list?
+                        paramArray.Add(argumentsBuilder[argIndex]);
+                        if (paramsArgIndex == -1)
+                        {
+                            paramsArgIndex = argIndex;
+                        }
                     }
                 }
-            }
 
-            var paramArrayType = parameters[paramsParam].Type;
-            var arrayArgs = paramArray.ToImmutableAndFree();
-
-            // If this is a zero-length array, rather than using "new T[0]", optimize with "Array.Empty<T>()" 
-            // if it's available.  However, we also disable the optimization if we're in an expression lambda, the 
-            // point of which is just to represent the semantics of an operation, and we don't know that all consumers
-            // of expression lambdas will appropriately understand Array.Empty<T>().
-            // We disable it for pointer types as well, since they cannot be used as Type Arguments.
-            if (arrayArgs.Length == 0
-                && !_inExpressionLambda
-                && paramArrayType is ArrayTypeSymbol ats // could be false if there's a semantic error, e.g. the params parameter type isn't an array
-                && !ats.ElementType.IsPointerOrFunctionPointer())
-            {
-                MethodSymbol? arrayEmpty = _compilation.GetWellKnownTypeMember(WellKnownMember.System_Array__Empty) as MethodSymbol;
-                if (arrayEmpty != null) // will be null if Array.Empty<T> doesn't exist in reference assemblies
+                for (var argIndex = 0; argIndex < argsToParamsOpt.Length; argIndex++)
                 {
-                    _diagnostics.ReportUseSite(arrayEmpty, syntax);
-                    // return an invocation of "Array.Empty<T>()"
-                    arrayEmpty = arrayEmpty.Construct(ImmutableArray.Create(ats.ElementType));
-                    return new BoundCall(
-                        syntax,
-                        null,
-                        arrayEmpty,
-                        ImmutableArray<BoundExpression>.Empty,
-                        default(ImmutableArray<string>),
-                        default(ImmutableArray<RefKind>),
-                        isDelegateCall: false,
-                        expanded: false,
-                        invokedAsExtensionMethod: false,
-                        argsToParamsOpt: default(ImmutableArray<int>),
-                        defaultArguments: default(BitVector),
-                        resultKind: LookupResultKind.Viable,
-                        type: arrayEmpty.ReturnType);
+                    if (argsToParamsOpt[argIndex] == paramsParamIndex)
+                    {
+                        if (argIndex == paramsArgIndex)
+                        {
+                            nonParamArguments.Add(makeParamsArrayArgument());
+                            argsToParamsBuilder.Add(paramsParamIndex);
+                        }
+                        else
+                        {
+                            // this is some other trailing argument already added to 'paramArray'.
+                        }
+                    }
+                    else
+                    {
+                        nonParamArguments.Add(argumentsBuilder[argIndex]);
+                        argsToParamsBuilder.Add(argsToParamsOpt[argIndex]);
+                    }
+                }
+
+                // Call uses out-of-order labeled arguments and has no explicit params argument.
+                // Just stick the params argument at the end.
+                if (paramsArgIndex == -1)
+                {
+                    Debug.Assert(nonParamArguments.Count == paramsParamIndex);
+                    nonParamArguments.Add(makeParamsArrayArgument());
+                    argsToParamsBuilder.Add(paramsParamIndex);
                 }
             }
 
-            return CreateParamArrayArgument(syntax, paramArrayType, arrayArgs, _compilation, this);
+            // TODO: the AnalyzedArguments owns this instance. Can this whole thing be made cleaner?
+            //argumentsBuilder.Free();
+            argumentsBuilder = nonParamArguments;
+            if (argsToParamsBuilder is not null)
+            {
+                Debug.Assert(argsToParamsBuilder.Count == argumentsBuilder.Count);
+                argsToParamsOpt = argsToParamsBuilder.ToImmutableAndFree();
+            }
+
+            Debug.Assert(argumentsBuilder.Count == parameters.Length);
+            return;
+
+            BoundExpression makeParamsArrayArgument()
+            {
+                var paramArrayType = parameters[paramsParamIndex].Type;
+                var arrayArgs = paramArray.ToImmutableAndFree();
+
+                // If this is a zero-length array, rather than using "new T[0]", optimize with "Array.Empty<T>()" 
+                // if it's available.  However, we also disable the optimization if we're in an expression lambda, the 
+                // point of which is just to represent the semantics of an operation, and we don't know that all consumers
+                // of expression lambdas will appropriately understand Array.Empty<T>().
+                // We disable it for pointer types as well, since they cannot be used as Type Arguments.
+                if (arrayArgs.Length == 0
+                    && !InExpressionTree
+                    && paramArrayType is ArrayTypeSymbol ats // could be false if there's a semantic error, e.g. the params parameter type isn't an array
+                    && !ats.ElementType.IsPointerOrFunctionPointer())
+                {
+                    MethodSymbol? arrayEmpty = Compilation.GetWellKnownTypeMember(WellKnownMember.System_Array__Empty) as MethodSymbol;
+                    if (arrayEmpty != null) // will be null if Array.Empty<T> doesn't exist in reference assemblies
+                    {
+                        diagnostics.ReportUseSite(arrayEmpty, syntax);
+                        // return an invocation of "Array.Empty<T>()"
+                        arrayEmpty = arrayEmpty.Construct(ImmutableArray.Create(ats.ElementType));
+                        return new BoundCall(
+                            syntax,
+                            null,
+                            arrayEmpty,
+                            ImmutableArray<BoundExpression>.Empty,
+                            default(ImmutableArray<string>),
+                            default(ImmutableArray<RefKind>),
+                            isDelegateCall: false,
+                            expanded: false,
+                            invokedAsExtensionMethod: false,
+                            argsToParamsOpt: default(ImmutableArray<int>),
+                            defaultArguments: default(BitVector),
+                            resultKind: LookupResultKind.Viable,
+                            type: arrayEmpty.ReturnType);
+                    }
+                }
+                TypeSymbol int32Type = Compilation.GetSpecialType(SpecialType.System_Int32);
+                ConstantValue constantValue = ConstantValue.Create(arrayArgs.Length);
+                BoundExpression arraySize = new BoundLiteral(syntax, constantValue, int32Type, constantValue.IsBad) { WasCompilerGenerated = true };
+
+                return new BoundArrayCreation(
+                    syntax,
+                    ImmutableArray.Create(arraySize),
+                    new BoundArrayInitialization(syntax, arrayArgs) { WasCompilerGenerated = true },
+                    paramArrayType)
+                { WasCompilerGenerated = true };
+            }
         }
-
-        private static BoundExpression CreateParamArrayArgument(SyntaxNode syntax,
-            TypeSymbol paramArrayType,
-            ImmutableArray<BoundExpression> arrayArgs,
-            CSharpCompilation compilation,
-            LocalRewriter? localRewriter)
-        {
-
-            TypeSymbol int32Type = compilation.GetSpecialType(SpecialType.System_Int32);
-            BoundExpression arraySize = MakeLiteral(syntax, ConstantValue.Create(arrayArgs.Length), int32Type, localRewriter);
-
-            return new BoundArrayCreation(
-                syntax,
-                ImmutableArray.Create(arraySize),
-                new BoundArrayInitialization(syntax, arrayArgs) { WasCompilerGenerated = true },
-                paramArrayType)
-            { WasCompilerGenerated = true };
-        }
-
 #nullable disable
 
         /// <summary>

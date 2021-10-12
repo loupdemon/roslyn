@@ -629,7 +629,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             // stores in storesToTemps and make the actual argument a reference to the temp.
             // Do not yet attempt to deal with params arrays or optional arguments.
             BuildStoresToTemps(
-                expanded,
                 argsToParamsOpt,
                 parameters,
                 argumentRefKindsOpt,
@@ -646,12 +645,6 @@ namespace Microsoft.CodeAnalysis.CSharp
             OptimizeTemporaries(actualArguments, storesToTemps, temps);
 
             storesToTemps.Free();
-
-            // Step two: If we have a params array, build the array and fill in the argument.
-            if (expanded)
-            {
-                actualArguments[actualArguments.Length - 1] = BuildParamsArray(syntax, methodOrIndexer, argsToParamsOpt, rewrittenArguments, parameters, actualArguments[actualArguments.Length - 1]);
-            }
 
             if (isComReceiver)
             {
@@ -842,7 +835,6 @@ namespace Microsoft.CodeAnalysis.CSharp
 
         // This fills in the arguments, refKinds and storesToTemps arrays.
         private void BuildStoresToTemps(
-            bool expanded,
             ImmutableArray<int> argsToParamsOpt,
             ImmutableArray<ParameterSymbol> parameters,
             ImmutableArray<RefKind> argumentRefKinds,
@@ -863,33 +855,6 @@ namespace Microsoft.CodeAnalysis.CSharp
                 RefKind paramRefKind = parameters[p].RefKind;
 
                 Debug.Assert(arguments[p] == null);
-
-                // Unfortunately, we violate the specification and allow:
-                // M(int q, params int[] x) ... M(x : X(), q : Q());
-                // which means that we cannot bail out just because
-                // an argument of an expanded-form call corresponds to
-                // the parameter array. We need to make sure that the
-                // side effects of X() and Q() continue to happen in the right
-                // order here.
-                //
-                // Fortunately, we do disallow M(x : 123, x : 345, x : 456).
-                // 
-                // Here's what we'll do. If all the remaining arguments
-                // correspond to elements in the parameter array then 
-                // we can bail out here without creating any temporaries.
-                // The next step in the call rewriter will deal with gathering
-                // up the elements. 
-                //
-                // However, if there are other elements after this one
-                // that do not correspond to elements in the parameter array
-                // then we need to create a temporary as usual. The step that
-                // produces the parameter array will need to deal with that
-                // eventuality.
-                if (IsBeginningOfParamArray(p, a, expanded, arguments.Length, rewrittenArguments, argsToParamsOpt, out int paramArrayArgumentCount)
-                    && a + paramArrayArgumentCount == rewrittenArguments.Length)
-                {
-                    return;
-                }
 
                 if ((!forceLambdaSpilling || !isLambdaConversion(argument)) &&
                     IsSafeForReordering(argument, argRefKind))
@@ -975,7 +940,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     // Set loop variable so the value for next iteration will be the index of the first non param-array argument after param-array argument(s).
                     a = firstNonParamArrayArgumentIndex - 1;
 
-                    argument = CreateParamArrayArgument(syntax, parameter.Type, paramArray.ToImmutableAndFree(), compilation, localRewriter: null);
+                    // TODO: build params array during binding
+                    //argument = CreateParamArrayArgument(syntax, parameter.Type, paramArray.ToImmutableAndFree(), compilation, localRewriter: null);
                 }
 
                 argumentsInEvaluationBuilder.Add(operationFactory.CreateArgumentOperation(kind, parameter.GetPublicSymbol(), argument));
@@ -988,10 +954,12 @@ namespace Microsoft.CodeAnalysis.CSharp
                 Debug.Assert(lastParam.IsParams);
 
                 // Create an empty array for omitted param array argument.
-                BoundExpression argument = CreateParamArrayArgument(syntax, lastParam.Type, ImmutableArray<BoundExpression>.Empty, compilation, localRewriter: null);
+
+                // TODO: build params array during binding
+                //BoundExpression argument = CreateParamArrayArgument(syntax, lastParam.Type, ImmutableArray<BoundExpression>.Empty, compilation, localRewriter: null);
                 ArgumentKind kind = ArgumentKind.ParamArray;
 
-                argumentsInEvaluationBuilder.Add(operationFactory.CreateArgumentOperation(kind, lastParam.GetPublicSymbol(), argument));
+                //argumentsInEvaluationBuilder.Add(operationFactory.CreateArgumentOperation(kind, lastParam.GetPublicSymbol(), argument));
             }
 
             Debug.Assert(argumentsInEvaluationBuilder.All(static arg => arg is not null));

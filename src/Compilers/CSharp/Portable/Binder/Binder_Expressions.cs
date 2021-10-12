@@ -4102,9 +4102,10 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                     var expanded = memberResolutionResult.Result.Kind == MemberResolutionKind.ApplicableInExpandedForm;
                     var argsToParamsOpt = memberResolutionResult.Result.ArgsToParamsOpt;
-                    BindDefaultArguments(nonNullSyntax, resultMember.Parameters, analyzedArguments.Arguments, analyzedArguments.RefKinds, ref argsToParamsOpt, out var defaultArguments, expanded, enableCallerInfo, diagnostics);
+                    var argumentsBuilder = analyzedArguments.Arguments;
+                    BindDefaultArgumentsAndParamsArray(nonNullSyntax, resultMember.Parameters, ref argumentsBuilder, analyzedArguments.RefKinds, ref argsToParamsOpt, out var defaultArguments, expanded, enableCallerInfo, diagnostics);
 
-                    var arguments = analyzedArguments.Arguments.ToImmutable();
+                    var arguments = argumentsBuilder.ToImmutableAndFree();
                     var refKinds = analyzedArguments.RefKinds.ToImmutableOrNull();
                     if (!hasErrors)
                     {
@@ -5365,9 +5366,10 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                 var expanded = memberResolutionResult.Result.Kind == MemberResolutionKind.ApplicableInExpandedForm;
                 var argToParams = memberResolutionResult.Result.ArgsToParamsOpt;
-                BindDefaultArguments(node, method.Parameters, analyzedArguments.Arguments, analyzedArguments.RefKinds, ref argToParams, out var defaultArguments, expanded, enableCallerInfo: true, diagnostics);
+                var argumentsBuilder = analyzedArguments.Arguments;
+                BindDefaultArgumentsAndParamsArray(node, method.Parameters, ref argumentsBuilder, analyzedArguments.RefKinds, ref argToParams, out var defaultArguments, expanded, enableCallerInfo: true, diagnostics);
 
-                var arguments = analyzedArguments.Arguments.ToImmutable();
+                var arguments = argumentsBuilder.ToImmutableAndFree();
                 var refKinds = analyzedArguments.RefKinds.ToImmutableOrNull();
 
                 if (!hasError)

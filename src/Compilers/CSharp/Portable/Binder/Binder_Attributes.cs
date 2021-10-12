@@ -566,7 +566,18 @@ namespace Microsoft.CodeAnalysis.CSharp
             }
             else
             {
-                constructorArguments = boundConstructorArguments.Arguments.ToImmutable();
+                var argumentsBuilder = boundConstructorArguments.Arguments;
+                BindDefaultArgumentsAndParamsArray(
+                    node,
+                    memberResolutionResult.Member.Parameters,
+                    ref argumentsBuilder,
+                    argumentRefKindsBuilder: null,
+                    ref argsToParamsOpt,
+                    out _,
+                    expanded: memberResolutionResult.Resolution == MemberResolutionKind.ApplicableInExpandedForm,
+                    enableCallerInfo: false,
+                    diagnostics);
+                constructorArguments = argumentsBuilder.ToImmutableAndFree();
             }
             argsToParamsOpt = memberResolutionResult.Result.ArgsToParamsOpt;
             expanded = memberResolutionResult.Result.Kind == MemberResolutionKind.ApplicableInExpandedForm;
