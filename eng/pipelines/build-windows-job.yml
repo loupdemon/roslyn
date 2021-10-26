@@ -31,6 +31,8 @@ jobs:
   timeoutInMinutes: 40
 
   steps:
+    - script: rm -r -f $(Build.SourcesDirectory)
+
     - template: checkout-windows-task.yml
 
     - task: PowerShell@2
