@@ -6,7 +6,6 @@ using System;
 using System.Collections.Immutable;
 using System.Composition;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeActions;
@@ -35,7 +34,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UseParameterNullChecking
 
         public override Task RegisterCodeFixesAsync(CodeFixContext context)
         {
-            var diagnostic = context.Diagnostics.First();
+            var diagnostic = context.Diagnostics[0];
             context.RegisterCodeFix(
                 new MyCodeAction(CSharpAnalyzersResources.Use_parameter_null_checking,
                 c => FixAsync(context.Document, diagnostic, c)),
@@ -101,7 +100,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UseParameterNullChecking
         private class MyCodeAction : CustomCodeActions.DocumentChangeAction
         {
             public MyCodeAction(string title, Func<CancellationToken, Task<Document>> createChangedDocument)
-                : base(title, createChangedDocument, title)
+                : base(title, createChangedDocument, equivalenceKey: nameof(CSharpAnalyzersResources.Use_parameter_null_checking))
             {
             }
         }

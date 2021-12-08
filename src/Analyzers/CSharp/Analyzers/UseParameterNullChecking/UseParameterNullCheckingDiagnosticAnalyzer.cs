@@ -63,7 +63,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UseParameterNullChecking
         {
             var cancellationToken = context.CancellationToken;
 
-            var semanticModel = context.SemanticModel!;
+            var semanticModel = context.SemanticModel;
             var syntaxTree = semanticModel.SyntaxTree;
 
             var option = context.Options.GetOption(CodeStyleOptions2.PreferParameterNullChecking, semanticModel.Language, syntaxTree, cancellationToken);
@@ -156,7 +156,7 @@ namespace Microsoft.CodeAnalysis.CSharp.UseParameterNullChecking
                         break;
                 }
 
-                context.ReportDiagnostic(Diagnostic.Create(Descriptor, statement.GetLocation()));
+                context.ReportDiagnostic(DiagnosticHelper.Create(Descriptor, statement.GetLocation(), option.Notification.Severity, additionalLocations: null, properties: null));
             }
 
             bool areOperandsApplicable(ExpressionSyntax maybeParameter, ExpressionSyntax maybeNullLiteral)
