@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -325,8 +325,7 @@ partial class C
 
         [Theory]
         [Trait(Traits.Feature, Traits.Features.CodeActionsInitializeParameter)]
-        [InlineData(LanguageVersionExtensions.CSharpNext)]
-        [InlineData(LanguageVersion.CSharp8)]
+        [CombinatorialData]
         public async Task TestNotOnPartialMethodDefinition2(LanguageVersion languageVersion)
         {
             var code = @"
